@@ -29,6 +29,17 @@ public class LightmappingAdvancedWindow : EditorWindow
 	
 	
 	
+	private LightmapBakeQuality _bakeQuality;
+	private LightmapBakeQuality BakeQuality {
+		get {
+			return _bakeQuality;
+		}
+		set {
+			_bakeQuality = value;
+		}
+	}
+	
+	
 	void OnGUI ()
 	{
 		if (GUILayout.Button ("Save File")) {
@@ -49,9 +60,8 @@ public class LightmappingAdvancedWindow : EditorWindow
 		}
 		
 		
-		
 		if (config != null) {
-//			EditorGUILayout.EnumPopup () (config.aaSettings.filter);
+			BakeQuality = (LightmapBakeQuality)EditorGUILayout.EnumPopup (BakeQuality);
 		}
 		
 	}

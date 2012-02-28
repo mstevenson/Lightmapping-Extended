@@ -127,9 +127,32 @@ public class ILConfig
 	[System.Serializable]
 	public class EnvironmentSettings
 	{
+		/// <summary>
+		/// The type of Environment: None, Skylight or IBL.
+		/// </summary>
 		public string giEnvironment = "SkyLight";
+		/// <summary>
+		/// A constant environment color. In Unity: "Sky Light Color"
+		/// </summary>
+		/// <remarks>
+		/// Used if type is Skylight. It is often a good idea to keep the color below 1.0 in intensity
+		/// to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.
+		/// </remarks>
 		public LMColor skyLightColor = new LMColor (0.86f, 0.93f, 1, 1);
+		/// <summary>
+		/// A scale factor for Global Illumination intensity. In Unity: "Sky Light Intensity"
+		/// </summary>
+		/// <remarks>
+		/// Used for avoiding gamma correction errors and to scale HDR textures to something that fits your scene.
+		/// </remarks>
 		public float giEnvironmentIntensity = 0;
+		/// <summary>
+		/// The image file to use for IBL.
+		/// </summary>
+		/// <remarks>
+		/// Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image.
+		/// </remarks>
+		public string iblImageFile;
 	}
 	
 	[System.Serializable]
@@ -143,18 +166,75 @@ public class ILConfig
 	{
 		public bool enableGI = true;
 		public bool fgPreview = false;
+		/// <summary>
+		/// The maximum number of rays taken in each Final Gather sample. In Unity: "Final Gather Rays"
+		/// </summary>
+		/// <remarks>
+		/// More rays gives better results but take longer to evaluate.
+		/// </remarks>
 		public int fgRays = 1000;
+		/// <summary>
+		/// Controls how sensitive the final gather should be for contrast differences between the points during precalculation.
+		/// In Unity: "Contrast Threshold"
+		/// </summary>
+		/// <remarks>
+		/// If the contrast difference is above this threshold for neighbouring points, more points will be created
+		/// in that area. This tells the algorithmto place points where they are really needed, e.g. at shadow boundaries
+		/// or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created
+		/// in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high
+		/// variance and hence a high contrast difference. In that the case contrast threshold needs to be raised to prevent
+		/// points from clumping together or using more rays per sample.
+		/// </remarks>
 		public float fgContrastThreshold = 0.05f;
+		/// <summary>
+		/// Controls how the irradiance gradient is used in the interpolation. In Unity: "Interpolation"
+		/// </summary>
+		/// <remarks>
+		/// Each point stores its irradiance gradient which can be used to improve the interpolation.
+		/// In some situations using the gradient can result in white "halos" and other artifacts.
+		/// </remarks>
 		public float fgGradientThreshold = 0;
 		public bool fgCheckVisibility = true;
+		/// <summary>
+		/// Sets the number of final gather points to interpolate between. In Unity: "Interpolation Points"
+		/// </summary>
+		/// <remarks>
+		/// A higher value will give a smoother result, but can also smooth out details. If light leakage
+		/// is introduced through walls when this value is increased, checking the sample visibility solves that problem.
+		/// </remarks>
 		public int fgInterpolationPoints = 15;
+		/// <summary>
+		/// Controls the number of indirect light bounces. In Unity: "Bounces"
+		/// </summary>
+		/// <remarks>
+		/// A higher value gives a more correct result,
+		/// but the cost is increased rendering time. For cheaper multi bounce GI, use Path Tracer as
+		/// the secondary integrator instead of increasing depth.
+		/// </remarks>
 		public float fgDepth = 1;
 		public string primaryIntegrator = "FinalGather";
+		/// <summary>
+		/// As a post process, converts the color of the primary integrator result from RGB to HSV
+		/// and scales the V value. In Unity: "Bounce Intensity"
+		/// </summary>
 		public float primaryIntensity = 1;
 		public float primarySaturation = 1;
 		public string secondaryIntegrator = "None";
 		public float secondaryIntensity = 1;
 		public float secondarySaturation = 1;
+		/// <summary>
+		/// This setting can be used to exaggerate light bouncing in dark scenes. In Unity: "Bounce Boost"
+		/// </summary>
+		/// <remarks>
+		/// Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations.
+		/// The typical use case is scenes authored with dark materials, this happens easily when doing only direct
+		/// lighting since it's easy to compensate dark materials with strong light sources. Indirect light will
+		/// be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse
+		/// boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting
+		/// in a similar way making light bounce less than the materials says, values below 0 is invalid. The
+		/// actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).
+		/// </remarks>
+		public float diffuseBoost = 1;
 		public float fgAOInfluence = 0;
 		public float fgAOMaxDistance = 0.223798f;
 		public float fgAOContrast = 1;
