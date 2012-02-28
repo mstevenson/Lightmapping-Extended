@@ -40,7 +40,7 @@
     <fgGradientThreshold>0</fgGradientThreshold>
     <fgCheckVisibility>true</fgCheckVisibility>
     <fgInterpolationPoints>15</fgInterpolationPoints>
-    <fgDepth>1</fgDepth>
+    <fgDepth>30</fgDepth>
     <primaryIntegrator>FinalGather</primaryIntegrator>
     <primaryIntensity>1</primaryIntensity>
     <primarySaturation>1</primarySaturation>

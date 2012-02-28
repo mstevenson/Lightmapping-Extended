@@ -270,7 +270,7 @@ public class ILConfig
 		/// but the cost is increased rendering time. For cheaper multi bounce GI, use Path Tracer as
 		/// the secondary integrator instead of increasing depth.
 		/// </remarks>
-		public float fgDepth = 1;
+		public int fgDepth = 1;
 		public Integrator primaryIntegrator = Integrator.FinalGather;
 		/// <summary>
 		/// As a post process, converts the color of the primary integrator result from RGB to HSV
