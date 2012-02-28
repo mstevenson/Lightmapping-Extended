@@ -102,17 +102,43 @@ public class ILConfig
 	}
 	
 	
-	
 	[System.Serializable]
 	public class AASettings
 	{
-		public string samplingMode = "Adaptive";
+		public enum SamplingMode {
+			/// <summary>
+			/// Anti-aliasing scheme for under/over sampling (from 1/256 up to 256 samples per pixel)
+			/// </summary>
+			Adaptive,
+			/// <summary>
+			/// Anti-aliasing scheme for super sampling (from 1 up to 128 samples per pixel)
+			/// </summary>
+			SuperSampling
+		}
+		
+		public enum Filter {
+			/// <summary>
+			/// Each sample is treated as equally important. The fastest filter to execute but it gives blurry results.
+			/// </summary>
+			Box,
+			/// <summary>
+			/// The filter kernel is a tent which means that distant samples are considered less important.
+			/// </summary>
+			Triangle,
+			/// <summary>
+			/// Uses the Gauss function as filter kernel. This gives the best results (removes noise, preserves details).
+			/// </summary>
+			Gauss
+		}
+		
+		public SamplingMode samplingMode = SamplingMode.Adaptive;
 		public bool clamp = false;
 		public float contrast = 0.1f;
 		public bool diagnose = false;
 		public int minSampleRate = 0;
 		public int maxSampleRate = 2;
-		public string filter = "Gauss1234";
+		
+		public Filter filter = Filter.Gauss;
 		public LMVec2 filterSize = new LMVec2 (2.2f, 2.2f);
 	}
 	
@@ -125,12 +151,35 @@ public class ILConfig
 	}
 	
 	[System.Serializable]
+	/// <summary>
+	/// Environment settings control what happens if a ray misses all geometry in the scene. 
+	/// </summary>
+	/// <remarks>
+	/// Defining an environment is usually a very good way to get very pleasing outdoor illumination results,
+	/// but might also increase bake times.
+	/// 
+	/// Note that environments should only be used for effects that can be considered to be infinitely far away,
+	/// meaning that only the directional component matters.
+	/// </remarks>
 	public class EnvironmentSettings
 	{
+		// 
+		public enum Environment {
+			None,
+			/// <summary>
+			/// A constant color.
+			/// </summary>
+			SkyLight,
+			/// <summary>
+			/// An HDR image.
+			/// </summary>
+			IBL
+		}
+		
 		/// <summary>
 		/// The type of Environment: None, Skylight or IBL.
 		/// </summary>
-		public string giEnvironment = "SkyLight";
+		public Environment giEnvironment = Environment.SkyLight;
 		/// <summary>
 		/// A constant environment color. In Unity: "Sky Light Color"
 		/// </summary>
@@ -147,7 +196,7 @@ public class ILConfig
 		/// </remarks>
 		public float giEnvironmentIntensity = 0;
 		/// <summary>
-		/// The image file to use for IBL.
+		/// The image file to use for IBL, using an absolute path.
 		/// </summary>
 		/// <remarks>
 		/// Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image.
@@ -164,6 +213,16 @@ public class ILConfig
 	[System.Serializable]
 	public class GISettings
 	{
+		public enum Integrator {
+			None,
+			/// <summary>
+			/// Used if many indirect bounces are needed and Final Gather-only solution with acceptable
+			/// quality would take to much time to render.
+			/// </summary>
+			PathTracer,
+			FinalGather
+		}
+		
 		public bool enableGI = true;
 		public bool fgPreview = false;
 		/// <summary>
@@ -212,14 +271,14 @@ public class ILConfig
 		/// the secondary integrator instead of increasing depth.
 		/// </remarks>
 		public float fgDepth = 1;
-		public string primaryIntegrator = "FinalGather";
+		public Integrator primaryIntegrator = Integrator.FinalGather;
 		/// <summary>
 		/// As a post process, converts the color of the primary integrator result from RGB to HSV
 		/// and scales the V value. In Unity: "Bounce Intensity"
 		/// </summary>
 		public float primaryIntensity = 1;
 		public float primarySaturation = 1;
-		public string secondaryIntegrator = "None";
+		public Integrator secondaryIntegrator = Integrator.None;
 		public float secondaryIntensity = 1;
 		public float secondarySaturation = 1;
 		/// <summary>
@@ -244,11 +303,15 @@ public class ILConfig
 	[System.Serializable]
 	public class SurfaceTransferSettings
 	{
+		public enum SelectionMode {
+			Normal
+		}
+		
 		public float frontRange = 0;
 		public float frontBias = 0;
 		public float backRange = 2;
 		public float backBias = -1;
-		public string selectionMode = "Normal";
+		public SelectionMode selectionMode = SelectionMode.Normal;
 	}
 	
 	[System.Serializable]

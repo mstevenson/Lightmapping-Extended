@@ -40,6 +40,8 @@ public class LightmappingAdvancedWindow : EditorWindow
 	}
 	
 	
+	private int tabSelected;
+	
 	void OnGUI ()
 	{
 		if (GUILayout.Button ("Save File")) {
@@ -60,9 +62,49 @@ public class LightmappingAdvancedWindow : EditorWindow
 		}
 		
 		
+		
 		if (config != null) {
 			BakeQuality = (LightmapBakeQuality)EditorGUILayout.EnumPopup (BakeQuality);
 		}
 		
 	}
+	
+	
+	void RenderSettingsGUI ()
+	{
+		
+	}
+	
+	void EnvironmentSettingsGUI ()
+	{
+		
+	}
+	
+	
+	void FrameSettingsGUI ()
+	{
+		
+	}
+	
+	
+	void AdaptiveSamplingGUI ()
+	{
+		
+	}
+	
+	void GlobalIllumination ()
+	{
+		
+	}
+	
+	void SurfaceTransfer ()
+	{
+		
+	}
+	
+	void TextureBakeGUI ()
+	{
+		
+	}
+	
 }

@@ -27,6 +27,7 @@
       <a>1</a>
     </skyLightColor>
     <giEnvironmentIntensity>0</giEnvironmentIntensity>
+    <iblImageFile />
   </EnvironmentSettings>
   <FrameSettings>
     <inputGamma>1</inputGamma>
@@ -46,6 +47,7 @@
     <secondaryIntegrator>None</secondaryIntegrator>
     <secondaryIntensity>1</secondaryIntensity>
     <secondarySaturation>1</secondarySaturation>
+    <diffuseBoost>1</diffuseBoost>
     <fgAOInfluence>0</fgAOInfluence>
     <fgAOMaxDistance>0.223798</fgAOMaxDistance>
     <fgAOContrast>1</fgAOContrast>
