@@ -44,13 +44,6 @@ public class LightmappingAdvancedWindow : EditorWindow
 	
 	void OnGUI ()
 	{
-		if (GUILayout.Button ("Save File")) {
-			if (config != null) {
-				Debug.Log ("save " + ConfigFilePath);
-				config.Save (ConfigFilePath);
-			}
-		}
-		
 		if (GUILayout.Button ("Load File")) {
 			string path = ConfigFilePath;
 			if (File.Exists (path)) {
@@ -67,11 +60,12 @@ public class LightmappingAdvancedWindow : EditorWindow
 			BakeQuality = (LightmapBakeQuality)EditorGUILayout.EnumPopup (BakeQuality);
 			
 			GlobalIlluminationGUI ();
-			
-			SurfaceTransferGUI ();
+//			SurfaceTransferGUI ();
 		}
 		
-		
+		if (GUI.changed) {
+			config.Save (ConfigFilePath);
+		}
 	}
 	
 	
@@ -99,32 +93,59 @@ public class LightmappingAdvancedWindow : EditorWindow
 	
 	void GlobalIlluminationGUI ()
 	{
-		config.giSettings.enableGI = EditorGUILayout.Toggle ("Preview", config.giSettings.enableGI);
+		config.giSettings.enableGI = EditorGUILayout.BeginToggleGroup ("Enable GI", config.giSettings.enableGI);
+		{
+			config.giSettings.fgRays = EditorGUILayout.IntField ("Rays", config.giSettings.fgRays);
+			config.giSettings.fgDepth = EditorGUILayout.IntField ("Bounces", config.giSettings.fgDepth);
+			
+			// Final Gather
+			if (EditorGUILayout.BeginToggleGroup ("Final Gather", config.giSettings.primaryIntegrator == ILConfig.GISettings.Integrator.FinalGather)) {
+				config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
+			} else {
+				config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.None;
+			}
+			config.giSettings.fgPreview = EditorGUILayout.Toggle ("Preview", config.giSettings.fgPreview);
+			config.giSettings.fgContrastThreshold = EditorGUILayout.FloatField ("Contrast Threshold", config.giSettings.fgContrastThreshold);
+			config.giSettings.fgGradientThreshold = EditorGUILayout.FloatField ("Gradient Threshold", config.giSettings.fgGradientThreshold);
+			config.giSettings.fgCheckVisibility = EditorGUILayout.Toggle ("Check Visibility", config.giSettings.fgCheckVisibility);
+			config.giSettings.fgInterpolationPoints = EditorGUILayout.IntSlider ("Interpolation Points", config.giSettings.fgInterpolationPoints, 1, 50);
+			
+			config.giSettings.diffuseBoost = EditorGUILayout.FloatField ("Bounce Boost", config.giSettings.diffuseBoost);
+			config.giSettings.primaryIntensity = EditorGUILayout.FloatField ("Bounce Intensity", config.giSettings.primaryIntensity);
+			config.giSettings.primarySaturation = EditorGUILayout.FloatField ("Bounce Saturation", config.giSettings.primarySaturation);
+			
+			EditorGUILayout.EndToggleGroup ();
+			EditorGUILayout.Space ();
+			
+			
+			// Path Tracer
+			if (EditorGUILayout.BeginToggleGroup ("Path Tracer", config.giSettings.secondaryIntegrator == ILConfig.GISettings.Integrator.PathTracer)) {
+				config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
+			} else {
+				config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
+			}
+			config.giSettings.secondaryIntensity = EditorGUILayout.FloatField ("Intensity", config.giSettings.secondaryIntensity);
+			config.giSettings.secondarySaturation = EditorGUILayout.FloatField ("Saturation", config.giSettings.secondarySaturation);
+			config.giSettings.ptAccuracy = EditorGUILayout.FloatField ("Accuracy", config.giSettings.ptAccuracy);
+			config.giSettings.ptPointSize = EditorGUILayout.FloatField ("Point Size", config.giSettings.ptPointSize);
+			config.giSettings.ptCacheDirectLight = EditorGUILayout.Toggle ("Cache Direct Light", config.giSettings.ptCacheDirectLight);
+			config.giSettings.ptCheckVisibility = EditorGUILayout.Toggle ("Check Visibility", config.giSettings.ptCheckVisibility);
+			
+			
+			EditorGUILayout.EndToggleGroup ();
+			EditorGUILayout.Space ();
+			
+			GUILayout.Label ("Ambient Occlusion");
+			config.giSettings.fgAOInfluence = EditorGUILayout.FloatField ("Influence", config.giSettings.fgAOInfluence);
+			if (config.giSettings.fgAOInfluence == 0)
+				GUI.enabled = false;
+			config.giSettings.fgAOMaxDistance = EditorGUILayout.FloatField ("Max Distance", config.giSettings.fgAOMaxDistance);
+			config.giSettings.fgAOContrast = EditorGUILayout.FloatField ("Contrast", config.giSettings.fgAOContrast);
+			config.giSettings.fgAOScale = EditorGUILayout.FloatField ("Scale", config.giSettings.fgAOScale);
+			GUI.enabled = true;
+		}
+		EditorGUILayout.EndToggleGroup ();
 		
-		GUILayout.Label ("Final Gather");
-		config.giSettings.fgPreview = EditorGUILayout.Toggle ("Preview", config.giSettings.fgPreview);
-		config.giSettings.fgRays = EditorGUILayout.IntField ("Rays", config.giSettings.fgRays);
-		config.giSettings.fgDepth = EditorGUILayout.IntField ("Bounces", config.giSettings.fgDepth);
-		config.giSettings.fgContrastThreshold = EditorGUILayout.FloatField ("Contrast Threshold", config.giSettings.fgContrastThreshold);
-		config.giSettings.fgGradientThreshold = EditorGUILayout.FloatField ("Gradient Threshold", config.giSettings.fgGradientThreshold);
-		config.giSettings.fgCheckVisibility = EditorGUILayout.Toggle ("Check Visibility", config.giSettings.fgCheckVisibility);
-		config.giSettings.fgInterpolationPoints = EditorGUILayout.IntField ("Interpolation Points", config.giSettings.fgInterpolationPoints);
-		
-		config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup ("Primary Integrator", config.giSettings.primaryIntegrator);
-		config.giSettings.primaryIntensity = EditorGUILayout.FloatField ("Primary Intensity", config.giSettings.primaryIntensity);
-		config.giSettings.primarySaturation = EditorGUILayout.FloatField ("Primary Saturation", config.giSettings.primarySaturation);
-		
-		config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup ("Secondary Integrator", config.giSettings.secondaryIntegrator);
-		config.giSettings.secondaryIntensity = EditorGUILayout.FloatField ("Secondary Intensity", config.giSettings.secondaryIntensity);
-		config.giSettings.secondarySaturation = EditorGUILayout.FloatField ("Secondary Saturation", config.giSettings.secondarySaturation);
-		
-		config.giSettings.diffuseBoost = EditorGUILayout.FloatField ("Bounce Boost", config.giSettings.diffuseBoost);
-		
-		GUILayout.Label ("Ambient Occlusion");
-		config.giSettings.fgAOInfluence = EditorGUILayout.FloatField ("Influence", config.giSettings.fgAOInfluence);
-		config.giSettings.fgAOMaxDistance = EditorGUILayout.FloatField ("Max Distance", config.giSettings.fgAOMaxDistance);
-		config.giSettings.fgAOContrast = EditorGUILayout.FloatField ("Contrast", config.giSettings.fgAOContrast);
-		config.giSettings.fgAOScale = EditorGUILayout.FloatField ("Scale", config.giSettings.fgAOScale);
 	}
 	
 	void SurfaceTransferGUI ()

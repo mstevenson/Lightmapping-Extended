@@ -294,6 +294,31 @@ public class ILConfig
 		/// actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).
 		/// </remarks>
 		public float diffuseBoost = 1;
+		
+		// Path Tracer
+		// FIXME these aren't included in the default Beast XML file. How do we handle null values when reading the XML?
+		/// <summary>
+		/// The Path Tracer accuracy.
+		/// </summary>
+		/// <remarks>
+		/// 1.0 means on pt sample per pixel. A higher value gives less noise.
+		/// </remarks>
+		public float ptAccuracy = 1;
+		/// <summary>
+		/// World space value. A small value makes the cache more detailed.
+		/// </summary>
+		public float ptPointSize = 0;
+		/// <summary>
+		/// Cache direct light as well, boosts speed.
+		/// </summary>
+		public bool ptCacheDirectLight = true;
+		/// <summary>
+		/// Check visibility before using values in the cache.
+		/// </summary>
+		public bool ptCheckVisibility = false;
+		
+		
+		// Ambient Occlusion
 		public float fgAOInfluence = 0;
 		public float fgAOMaxDistance = 0.223798f;
 		public float fgAOContrast = 1;
