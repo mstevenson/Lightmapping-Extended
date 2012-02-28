@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ILConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<?xml version="1.0" encoding="iso-8859-1"?>
+<ILConfig>
   <AASettings>
     <samplingMode>Adaptive</samplingMode>
     <clamp>false</clamp>
@@ -32,7 +32,7 @@
     <inputGamma>1</inputGamma>
   </FrameSettings>
   <GISettings>
-    <enabledGI>true</enabledGI>
+    <enableGI>true</enableGI>
     <fgPreview>false</fgPreview>
     <fgRays>1000</fgRays>
     <fgContrastThreshold>0.05</fgContrastThreshold>
@@ -51,6 +51,13 @@
     <fgAOContrast>1</fgAOContrast>
     <fgAOScale>2.0525</fgAOScale>
   </GISettings>
+  <SurfaceTransferSettings>
+    <frontRange>0</frontRange>
+    <frontBias>0</frontBias>
+    <backRange>2</backRange>
+    <backBias>-1</backBias>
+    <selectionMode>Normal</selectionMode>
+  </SurfaceTransferSettings>
   <TextureBakeSettings>
     <bgColor>
       <r>1</r>

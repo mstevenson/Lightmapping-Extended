@@ -57,6 +57,7 @@ public class LMColor
 #region Beast Settings
 
 [System.Serializable]
+[XmlRoot (Namespace = null)]
 public class ILConfig
 {
 	[XmlElement(ElementName = "AASettings")]
@@ -69,7 +70,7 @@ public class ILConfig
 	public FrameSettings frameSettings;
 	[XmlElement(ElementName = "GISettings")]
 	public GISettings giSettings;
-	[XmlElement(ElementName = "surfaceTransferSettings")]
+	[XmlElement(ElementName = "SurfaceTransferSettings")]
 	public SurfaceTransferSettings surfaceTransferSettings;
 	[XmlElement(ElementName = "TextureBakeSettings")]
 	public TextureBakeSettings textureBakeSettings;
@@ -113,7 +114,7 @@ public class ILConfig
 	[System.Serializable]
 	public class GISettings
 	{
-		public bool enabledGI = true;
+		public bool enableGI = true;
 		public bool fgPreview = false;
 		public int fgRays = 1000;
 		public float fgContrastThreshold = 0.05f;
@@ -186,9 +187,6 @@ public class LightmappingAdvancedWindow : EditorWindow
 			return null;
 		}
 		
-//		XmlWriterSettings settings = new XmlWriterSettings ();
-//		settings.OmitXmlDeclaration = true;
-		
 		XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
 		FileStream stream = new FileStream (path, FileMode.Open);
 		
@@ -199,14 +197,14 @@ public class LightmappingAdvancedWindow : EditorWindow
 	}
 
 	private void SaveConfigFile (string path, ILConfig data)
-	{
-		Directory.CreateDirectory (Path.GetDirectoryName (path));
-	
-		XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
-		TextWriter writer = new StreamWriter (path);
-	
-		serializer.Serialize (writer, data);
-		writer.Close ();
+	{	
+		using (XmlTextWriter writer = new XmlTextWriter (path, System.Text.Encoding.GetEncoding ("ISO-8859-1"))) {
+			XmlSerializerNamespaces ns = new XmlSerializerNamespaces ();
+			ns.Add (string.Empty, string.Empty);
+			writer.Formatting = Formatting.Indented;
+			XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
+			serializer.Serialize (writer, data, ns);
+		}
 	}
 	
 	
