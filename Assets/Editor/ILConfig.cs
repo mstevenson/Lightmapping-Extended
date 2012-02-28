@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
+using System.Xml;
 using System.Xml.Serialization;
+using System.IO;
 
 #region Data types
 
@@ -70,6 +72,35 @@ public class ILConfig
 	public SurfaceTransferSettings surfaceTransferSettings;
 	[XmlElement(ElementName = "TextureBakeSettings")]
 	public TextureBakeSettings textureBakeSettings;
+	
+	
+	public static ILConfig Load (string path)
+	{
+		FileInfo info = new FileInfo (path);
+		if (!info.Exists) {
+			return null;
+		}
+		
+		XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
+		FileStream stream = new FileStream (path, FileMode.Open);
+		
+		ILConfig config = (ILConfig)serializer.Deserialize (stream);
+		stream.Close ();
+	
+		return config;
+	}
+
+	public void Save (string path)
+	{	
+		using (XmlTextWriter writer = new XmlTextWriter (path, System.Text.Encoding.GetEncoding ("ISO-8859-1"))) {
+			XmlSerializerNamespaces ns = new XmlSerializerNamespaces ();
+			ns.Add (string.Empty, string.Empty);
+			writer.Formatting = Formatting.Indented;
+			XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
+			serializer.Serialize (writer, this, ns);
+		}
+	}
+	
 	
 	
 	[System.Serializable]
