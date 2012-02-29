@@ -4,60 +4,58 @@ using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
 
-#region Data types
-
-[System.Serializable]
-public class LMVec2
-{
-	public float x;
-	public float y;
-	
-	public LMVec2 ()
-	{
-		x = 0;
-		y = 0;
-	}
-	
-	public LMVec2 (float x, float y)
-	{
-		this.x = x;
-		this.y = y;
-	}
-}
-
-[System.Serializable]
-public class LMColor
-{
-	public float r;
-	public float g;
-	public float b;
-	public float a;
-	
-	public LMColor ()
-	{
-		this.r = 1;
-		this.g = 1;
-		this.b = 1;
-		this.a = 1;
-	}
-	
-	public LMColor (float r, float g, float b, float a)
-	{
-		this.r = r;
-		this.g = g;
-		this.b = b;
-		this.a = a;
-	}
-}
-
-#endregion
-
-
-#region Beast Settings
 
 [System.Serializable]
 public class ILConfig
 {
+	#region Data types
+
+	[System.Serializable]
+	public class LMVec2
+	{
+		public float x;
+		public float y;
+	
+		public LMVec2 ()
+		{
+			x = 0;
+			y = 0;
+		}
+	
+		public LMVec2 (float x, float y)
+		{
+			this.x = x;
+			this.y = y;
+		}
+	}
+	
+	[System.Serializable]
+	public class LMColor
+	{
+		public float r;
+		public float g;
+		public float b;
+		public float a;
+	
+		public LMColor ()
+		{
+			this.r = 1;
+			this.g = 1;
+			this.b = 1;
+			this.a = 1;
+		}
+	
+		public LMColor (float r, float g, float b, float a)
+		{
+			this.r = r;
+			this.g = g;
+			this.b = b;
+			this.a = a;
+		}
+	}
+	
+	#endregion
+	
 	[XmlElement(ElementName = "AASettings")]
 	public AASettings aaSettings;
 	[XmlElement(ElementName = "RenderSettings")]
@@ -224,6 +222,24 @@ public class ILConfig
 		}
 		
 		public bool enableGI = true;
+		/// <summary>
+		/// This setting can be used to exaggerate light bouncing in dark scenes. In Unity: "Bounce Boost"
+		/// </summary>
+		/// <remarks>
+		/// Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations.
+		/// The typical use case is scenes authored with dark materials, this happens easily when doing only direct
+		/// lighting since it's easy to compensate dark materials with strong light sources. Indirect light will
+		/// be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse
+		/// boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting
+		/// in a similar way making light bounce less than the materials says, values below 0 is invalid. The
+		/// actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).
+		/// </remarks>
+		public float diffuseBoost = 1;
+		
+		// ----------------------
+		// Final Gather - Quality
+		// ----------------------
+		
 		public bool fgPreview = false;
 		/// <summary>
 		/// The maximum number of rays taken in each Final Gather sample. In Unity: "Final Gather Rays"
@@ -246,22 +262,22 @@ public class ILConfig
 		/// </remarks>
 		public float fgContrastThreshold = 0.05f;
 		/// <summary>
-		/// Controls how the irradiance gradient is used in the interpolation. In Unity: "Interpolation"
+		/// Lower values remove white halos. In Unity: "Interpolation"
 		/// </summary>
 		/// <remarks>
 		/// Each point stores its irradiance gradient which can be used to improve the interpolation.
 		/// In some situations using the gradient can result in white "halos" and other artifacts.
 		/// </remarks>
 		public float fgGradientThreshold = 0;
-		public bool fgCheckVisibility = true;
 		/// <summary>
-		/// Sets the number of final gather points to interpolate between. In Unity: "Interpolation Points"
+		/// How much a normal can differ in the cache, given as cos(a).
 		/// </summary>
-		/// <remarks>
-		/// A higher value will give a smoother result, but can also smooth out details. If light leakage
-		/// is introduced through walls when this value is increased, checking the sample visibility solves that problem.
-		/// </remarks>
-		public int fgInterpolationPoints = 15;
+//		public float fgNormalThreshold = 0.2f;
+		
+		// -------------------
+		// Final Gather - Look
+		// -------------------
+		
 		/// <summary>
 		/// Controls the number of indirect light bounces. In Unity: "Bounces"
 		/// </summary>
@@ -271,6 +287,47 @@ public class ILConfig
 		/// the secondary integrator instead of increasing depth.
 		/// </remarks>
 		public int fgDepth = 1;
+		
+		// --------------------------
+		// Final Gather - Attenuation
+		// --------------------------
+		
+		/// <summary>
+		/// There is no attenuation before this distance.
+		/// </summary>
+		public float fgAttenuationStart = 0;
+		/// <summary>
+		/// The distance where attenuation fades to zero.
+		/// </summary>
+		/// <remarks>
+		/// To enable attenuation set this value higher than 0.0. The default value is 0.0.
+		/// </remarks>
+		public float fgAttenuationStop = 0;
+		public float fgFalloffExponent = 0;
+		
+		
+		// --------------------------------
+		// Final Gather - Ambient Occlusion
+		// --------------------------------
+		
+		/// <summary>
+		/// Set to >0 for AO to be calculated.
+		/// </summary>
+		public float fgAOInfluence = 0;
+		public float fgAOMaxDistance = 0.223798f;
+		public float fgAOContrast = 1;
+		public float fgAOScale = 2.0525f;
+		
+		
+		public bool fgCheckVisibility = true;
+		/// <summary>
+		/// Sets the number of final gather points to interpolate between. In Unity: "Interpolation Points"
+		/// </summary>
+		/// <remarks>
+		/// A higher value will give a smoother result, but can also smooth out details. If light leakage
+		/// is introduced through walls when this value is increased, checking the sample visibility solves that problem.
+		/// </remarks>
+		public int fgInterpolationPoints = 15;
 		public Integrator primaryIntegrator = Integrator.FinalGather;
 		/// <summary>
 		/// As a post process, converts the color of the primary integrator result from RGB to HSV
@@ -278,23 +335,14 @@ public class ILConfig
 		/// </summary>
 		public float primaryIntensity = 1;
 		public float primarySaturation = 1;
+		
+		// -----------
+		// Path Tracer
+		// -----------
+		
 		public Integrator secondaryIntegrator = Integrator.None;
 		public float secondaryIntensity = 1;
 		public float secondarySaturation = 1;
-		/// <summary>
-		/// This setting can be used to exaggerate light bouncing in dark scenes. In Unity: "Bounce Boost"
-		/// </summary>
-		/// <remarks>
-		/// Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations.
-		/// The typical use case is scenes authored with dark materials, this happens easily when doing only direct
-		/// lighting since it's easy to compensate dark materials with strong light sources. Indirect light will
-		/// be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse
-		/// boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting
-		/// in a similar way making light bounce less than the materials says, values below 0 is invalid. The
-		/// actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).
-		/// </remarks>
-		public float diffuseBoost = 1;
-		
 		// Path Tracer
 		// FIXME these aren't included in the default Beast XML file. How do we handle null values when reading the XML?
 		/// <summary>
@@ -316,13 +364,6 @@ public class ILConfig
 		/// Check visibility before using values in the cache.
 		/// </summary>
 		public bool ptCheckVisibility = false;
-		
-		
-		// Ambient Occlusion
-		public float fgAOInfluence = 0;
-		public float fgAOMaxDistance = 0.223798f;
-		public float fgAOContrast = 1;
-		public float fgAOScale = 2.0525f;
 	}
 	
 	[System.Serializable]
@@ -343,11 +384,18 @@ public class ILConfig
 	public class TextureBakeSettings
 	{
 		public LMColor bgColor = new LMColor (1, 1, 1, 1);
+		/// <summary>
+		/// Counteract unwanted light seams for tightly packed UV patches.
+		/// </summary>
 		public bool bilinearFilter = true;
+		/// <summary>
+		/// Find pixels which are only partially covered by the UV map.
+		/// </summary>
 		public bool conservativeRasterization = true;
+		/// <summary>
+		/// Expands the lightmap with the number of pixels specified to avoid black borders.
+		/// </summary>
 		public float edgeDilation = 3;
 	}
 }
-
-#endregion
 
