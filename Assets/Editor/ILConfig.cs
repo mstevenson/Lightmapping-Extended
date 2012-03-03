@@ -100,6 +100,62 @@ public class ILConfig
 	}
 	
 	
+	
+	#region Frame Settings
+	
+	public enum TileScheme
+	{
+		LeftToRight,
+		Hilbert,
+		Random,
+		Concentric
+	}
+	
+	public enum ColorCorrection
+	{
+		None,
+		Gamma,
+		SRGB
+	}
+	
+	[System.Serializable]
+	public class FrameSettings
+	{
+		public bool autoThreads = true;
+		public int autoThreadsSubtract = 0;
+		public int renderThreads = 2;
+		public bool dither = true;
+		public float inputGamma = 1.0;
+		public OutputCorrection outputCorrection;
+		public TileScheme tileScheme = TilScheme.Hilbert;
+		public bool premultiply = true;
+		public float premultiplyThreshold = 0.0;
+		public OutputVerbosity outputVerbosity;
+	}
+	
+	[System.Serializable]
+	class OutputVerbosity
+	{
+		public bool errorPrint = true;
+		public bool warningPrint = true;
+		public bool benchmarkPrint = false;
+		public bool progressPrint = true;
+		public bool infoPrint = false;
+		public bool verbosePrint = false;
+		public bool debugPrint = false;
+	}
+	
+	[System.Serializable]
+	class OutputCorrection
+	{
+		public ColorCorrection colorCorrection = None;
+		public float gamma = 1;
+	}
+	
+	#endregion
+	
+	
+	
 	[System.Serializable]
 	public class AASettings
 	{
@@ -119,14 +175,18 @@ public class ILConfig
 			/// Each sample is treated as equally important. The fastest filter to execute but it gives blurry results.
 			/// </summary>
 			Box,
+			CatmullRom,
+			Cubic,
 			/// <summary>
-			/// The filter kernel is a tent which means that distant samples are considered less important.
+			/// Removes noise, preserves details.
+			/// </summary>
+			Gauss,
+			Lanczos,
+			Mitchell,
+			/// <summary>
+			/// Distant samples are considered less important.
 			/// </summary>
 			Triangle,
-			/// <summary>
-			/// Uses the Gauss function as filter kernel. This gives the best results (removes noise, preserves details).
-			/// </summary>
-			Gauss
 		}
 		
 		public SamplingMode samplingMode = SamplingMode.Adaptive;
@@ -140,13 +200,28 @@ public class ILConfig
 		public LMVec2 filterSize = new LMVec2 (2.2f, 2.2f);
 	}
 	
+	
 	[System.Serializable]
-	public class RenderSettings
-	{
-		public float bias = 0;
-		public int maxShadowRays = 10000;
+	class RenderSettings {
+		public float bias = 0.005;
+		public int giTransparencyDepth = 2;
+		public bool ignoreLightLinks = false;
 		public int maxRayDepth = 6;
+		public int maxShadowRays = 4294967295;
+		public int minShadowRays = 0;
+		public int reflectionDepth = 2;
+		public float reflectionThreshold = 0.001;
+		public int shadowDepth = 2;
+		public bool shadowsIgnoreLightLinks = false;
+		public int transparencyDepth = 50;
+		public bool tsIntersectionNormalization = true;
+		public bool tsIntersectionOrthogonalization = true;
+		public bool tsOddUVFlipping = true;
+		public bool tsVertexNormalization = true;
+		public bool tsVertexOrthogonalization = true;
+		public float vertexMergeThreshold = 0.001;
 	}
+	
 	
 	[System.Serializable]
 	/// <summary>
@@ -202,169 +277,120 @@ public class ILConfig
 		public string iblImageFile;
 	}
 	
-	[System.Serializable]
-	public class FrameSettings
-	{
-		public float inputGamma = 1;
-	}
 	
 	[System.Serializable]
 	public class GISettings
 	{
+		public enum ClampMaterials {
+			None,
+			Component,
+			Intensity,
+		}
+		
 		public enum Integrator {
 			None,
+			FinalGather,
 			/// <summary>
 			/// Used if many indirect bounces are needed and Final Gather-only solution with acceptable
 			/// quality would take to much time to render.
 			/// </summary>
 			PathTracer,
-			FinalGather
+			MonteCarlo
 		}
 		
-		public bool enableGI = true;
-		/// <summary>
-		/// This setting can be used to exaggerate light bouncing in dark scenes. In Unity: "Bounce Boost"
-		/// </summary>
-		/// <remarks>
-		/// Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations.
-		/// The typical use case is scenes authored with dark materials, this happens easily when doing only direct
-		/// lighting since it's easy to compensate dark materials with strong light sources. Indirect light will
-		/// be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse
-		/// boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting
-		/// in a similar way making light bounce less than the materials says, values below 0 is invalid. The
-		/// actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).
-		/// </remarks>
+		
+		// Global Illumination
+		
+		public ClampMaterials clampMaterials = ClampMaterials.None;
 		public float diffuseBoost = 1;
-		
-		// ----------------------
-		// Final Gather - Quality
-		// ----------------------
-		
-		public bool fgPreview = false;
-		/// <summary>
-		/// The maximum number of rays taken in each Final Gather sample. In Unity: "Final Gather Rays"
-		/// </summary>
-		/// <remarks>
-		/// More rays gives better results but take longer to evaluate.
-		/// </remarks>
-		public int fgRays = 1000;
-		/// <summary>
-		/// Controls how sensitive the final gather should be for contrast differences between the points during precalculation.
-		/// In Unity: "Contrast Threshold"
-		/// </summary>
-		/// <remarks>
-		/// If the contrast difference is above this threshold for neighbouring points, more points will be created
-		/// in that area. This tells the algorithmto place points where they are really needed, e.g. at shadow boundaries
-		/// or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created
-		/// in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high
-		/// variance and hence a high contrast difference. In that the case contrast threshold needs to be raised to prevent
-		/// points from clumping together or using more rays per sample.
-		/// </remarks>
-		public float fgContrastThreshold = 0.05f;
-		/// <summary>
-		/// Lower values remove white halos. In Unity: "Interpolation"
-		/// </summary>
-		/// <remarks>
-		/// Each point stores its irradiance gradient which can be used to improve the interpolation.
-		/// In some situations using the gradient can result in white "halos" and other artifacts.
-		/// </remarks>
-		public float fgGradientThreshold = 0;
-		/// <summary>
-		/// How much a normal can differ in the cache, given as cos(a).
-		/// </summary>
-//		public float fgNormalThreshold = 0.2f;
-		
-		// -------------------
-		// Final Gather - Look
-		// -------------------
-		
-		/// <summary>
-		/// Controls the number of indirect light bounces. In Unity: "Bounces"
-		/// </summary>
-		/// <remarks>
-		/// A higher value gives a more correct result,
-		/// but the cost is increased rendering time. For cheaper multi bounce GI, use Path Tracer as
-		/// the secondary integrator instead of increasing depth.
-		/// </remarks>
-		public int fgDepth = 1;
-		
-		// --------------------------
-		// Final Gather - Attenuation
-		// --------------------------
-		
-		/// <summary>
-		/// There is no attenuation before this distance.
-		/// </summary>
-		public float fgAttenuationStart = 0;
-		/// <summary>
-		/// The distance where attenuation fades to zero.
-		/// </summary>
-		/// <remarks>
-		/// To enable attenuation set this value higher than 0.0. The default value is 0.0.
-		/// </remarks>
-		public float fgAttenuationStop = 0;
-		public float fgFalloffExponent = 0;
-		
-		
-		// --------------------------------
-		// Final Gather - Ambient Occlusion
-		// --------------------------------
-		
-		/// <summary>
-		/// Set to >0 for AO to be calculated.
-		/// </summary>
-		public float fgAOInfluence = 0;
-		public float fgAOMaxDistance = 0.223798f;
-		public float fgAOContrast = 1;
-		public float fgAOScale = 2.0525f;
-		
-		
-		public bool fgCheckVisibility = true;
-		/// <summary>
-		/// Sets the number of final gather points to interpolate between. In Unity: "Interpolation Points"
-		/// </summary>
-		/// <remarks>
-		/// A higher value will give a smoother result, but can also smooth out details. If light leakage
-		/// is introduced through walls when this value is increased, checking the sample visibility solves that problem.
-		/// </remarks>
-		public int fgInterpolationPoints = 15;
-		public Integrator primaryIntegrator = Integrator.FinalGather;
-		/// <summary>
-		/// As a post process, converts the color of the primary integrator result from RGB to HSV
-		/// and scales the V value. In Unity: "Bounce Intensity"
-		/// </summary>
+		public float emissiveScale = 1;
+		public bool enableCaustics = false;
+		public bool enableGI = true;
+		public bool ignoreNonDiffuse = true;
+		public int prepassMaxSampleRate = 0;
+		public int prepassMinSampleRate = -4;
+		public Integrator primaryIntegrator = FinalGather;
 		public float primaryIntensity = 1;
 		public float primarySaturation = 1;
-		
-		// -----------
-		// Path Tracer
-		// -----------
-		
-		public Integrator secondaryIntegrator = Integrator.None;
+		public float secondaryIntegrator = Integrator.PathTracer;
 		public float secondaryIntensity = 1;
 		public float secondarySaturation = 1;
-		// Path Tracer
-		// FIXME these aren't included in the default Beast XML file. How do we handle null values when reading the XML?
-		/// <summary>
-		/// The Path Tracer accuracy.
-		/// </summary>
-		/// <remarks>
-		/// 1.0 means on pt sample per pixel. A higher value gives less noise.
-		/// </remarks>
+		public float specularScale = 1;
+		
+		
+		// Final Gather
+		
+		public enum Cache {
+			Off,
+			Irradiance,
+			RadianceSH
+		}
+		
+		public float fgAOContrast = 1;
+		public float fgAOInfluence = 0;
+		public float fgAOMaxDistance = 0;
+		public float fgAOScale = 1;
+		public bool fgAOVisualize = false;
+		public float fgAccuracy = 1;
+		public float fgAttenuationStart = 0;
+		public float fgAttenuationStop = 0;
+		public bool fgCacheDirectLight = false;
+		public bool fgCheckVisibility = false;
+		public float fgCheckVisibilityDepth = 1;
+		public bool fgClampRadiance = false;
+		public float fgContrastThreshold = 0.1;
+		public int fgDepth = 1;
+		public bool fgDisableMinRadius = false;
+		public int fgEstimatePoints = 15;
+		public bool fgExploitFrameCoherence = false;
+		public float fgFalloffExponent = 0;
+		public float fgGradientThreshold = 0.5;
+		public int fgInterpolationPoints = 15;
+		public float fgLightLeakRadius = 0;
+		public bool fgLightLeakReduction = false;
+		public float fgMaxRayLength = 0;
+		public float fgNormalThreshold = 0.2;
+		public bool fgPreview = true;
+		public int fgRays = 300;
+		public float fgSmooth = 1;
+		public Cache fgUseCache = Cache.Irradiance;
+		public bool fgUseLegacy = false;
+		
+		
+		// PathTracer
+		
+		public enum PTFilterType {
+			None,
+			Box,
+			Gauss,
+			Triangle
+		}
+		
 		public float ptAccuracy = 1;
-		/// <summary>
-		/// World space value. A small value makes the cache more detailed.
-		/// </summary>
-		public float ptPointSize = 0;
-		/// <summary>
-		/// Cache direct light as well, boosts speed.
-		/// </summary>
 		public bool ptCacheDirectLight = true;
-		/// <summary>
-		/// Check visibility before using values in the cache.
-		/// </summary>
 		public bool ptCheckVisibility = false;
+		public float ptConservativeEnergyLimit = 0.95;
+		public LMColor ptDefaultColor = new LMColor (0, 0, 0);
+		public int ptDepth = 5;
+		public bool ptDiffuseIllum = true;
+		public string ptFile = "";
+		public float ptFilterSize = 3;
+		public PTFilterType ptFilterType = PTFilterType.Box;
+		public float ptNormalThreshold = 0.707;
+		public float ptPointSize = 0;
+		public bool ptPrecalcIrradiance = true;
+		public bool ptPreview = true;
+		public bool ptSpecularIllum = true;
+		public bool ptTransmissiveIllum = true;
+		
+		
+		// Monte Carlo
+		
+		public int mcDepth = 2;
+    	public float mcRayLength = 0;
+    	public int mcRays = 16;
 	}
+	
 	
 	[System.Serializable]
 	public class SurfaceTransferSettings
