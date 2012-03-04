@@ -101,26 +101,43 @@ public class ILConfig
 	
 	
 	
-	#region Frame Settings
-	
-	public enum TileScheme
-	{
-		LeftToRight,
-		Hilbert,
-		Random,
-		Concentric
-	}
-	
-	public enum ColorCorrection
-	{
-		None,
-		Gamma,
-		SRGB
-	}
-	
 	[System.Serializable]
 	public class FrameSettings
 	{
+		public enum TileScheme
+		{
+			LeftToRight,
+			Hilbert,
+			Random,
+			Concentric
+		}
+		
+		public enum ColorCorrection
+		{
+			None,
+			Gamma,
+			SRGB
+		}
+		
+		[System.Serializable]
+		public class OutputVerbosity
+		{
+			public bool errorPrint = true;
+			public bool warningPrint = true;
+			public bool benchmarkPrint = false;
+			public bool progressPrint = true;
+			public bool infoPrint = false;
+			public bool verbosePrint = false;
+			public bool debugPrint = false;
+		}
+	
+		[System.Serializable]
+		public class OutputCorrection
+		{
+			public ColorCorrection colorCorrection = ColorCorrection.None;
+			public float gamma = 1;
+		}
+		
 		public bool autoThreads = true;
 		public int autoThreadsSubtract = 0;
 		public int renderThreads = 2;
@@ -133,26 +150,29 @@ public class ILConfig
 		public OutputVerbosity outputVerbosity;
 	}
 	
-	[System.Serializable]
-	public class OutputVerbosity
-	{
-		public bool errorPrint = true;
-		public bool warningPrint = true;
-		public bool benchmarkPrint = false;
-		public bool progressPrint = true;
-		public bool infoPrint = false;
-		public bool verbosePrint = false;
-		public bool debugPrint = false;
-	}
+	
 	
 	[System.Serializable]
-	public class OutputCorrection
+	public class RenderSettings
 	{
-		public ColorCorrection colorCorrection = ColorCorrection.None;
-		public float gamma = 1;
+		public float bias = 0.005f;
+		public int giTransparencyDepth = 2;
+		public bool ignoreLightLinks = false;
+		public int maxRayDepth = 6;
+		public long maxShadowRays = 4294967295;
+		public int minShadowRays = 0;
+		public int reflectionDepth = 2;
+		public float reflectionThreshold = 0.001f;
+		public int shadowDepth = 2;
+		public bool shadowsIgnoreLightLinks = false;
+		public int transparencyDepth = 50;
+		public bool tsIntersectionNormalization = true;
+		public bool tsIntersectionOrthogonalization = true;
+		public bool tsOddUVFlipping = true;
+		public bool tsVertexNormalization = true;
+		public bool tsVertexOrthogonalization = true;
+		public float vertexMergeThreshold = 0.001f;
 	}
-	
-	#endregion
 	
 	
 	
@@ -189,37 +209,14 @@ public class ILConfig
 			Triangle,
 		}
 		
-		public SamplingMode samplingMode = SamplingMode.Adaptive;
-		public bool clamp = false;
-		public float contrast = 0.1f;
-		public bool diagnose = false;
 		public int minSampleRate = 0;
 		public int maxSampleRate = 2;
-		
-		public Filter filter = Filter.Gauss;
-		public LMVec2 filterSize = new LMVec2 (2.2f, 2.2f);
-	}
-	
-	
-	[System.Serializable]
-	public class RenderSettings {
-		public float bias = 0.005f;
-		public int giTransparencyDepth = 2;
-		public bool ignoreLightLinks = false;
-		public int maxRayDepth = 6;
-		public long maxShadowRays = 4294967295;
-		public int minShadowRays = 0;
-		public int reflectionDepth = 2;
-		public float reflectionThreshold = 0.001f;
-		public int shadowDepth = 2;
-		public bool shadowsIgnoreLightLinks = false;
-		public int transparencyDepth = 50;
-		public bool tsIntersectionNormalization = true;
-		public bool tsIntersectionOrthogonalization = true;
-		public bool tsOddUVFlipping = true;
-		public bool tsVertexNormalization = true;
-		public bool tsVertexOrthogonalization = true;
-		public float vertexMergeThreshold = 0.001f;
+		public float contrast = 0.1f;
+		public bool diagnose = false;
+		public bool clamp = false;
+		public SamplingMode samplingMode = SamplingMode.Adaptive;
+		public Filter filter = Filter.Box;
+		public LMVec2 filterSize = new LMVec2 (1, 1);
 	}
 	
 	
@@ -275,6 +272,17 @@ public class ILConfig
 		/// Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image.
 		/// </remarks>
 		public string iblImageFile;
+		public float iblBandingVsNoise = 1;
+		public bool iblEmitDiffuse = true;
+		public bool iblEmitLight = false;
+		public bool iblEmitSpecular = false;
+		public float iblGIEnvBlur = 0.05f;
+		public float iblIntensity = 1;
+		public int iblSamples = 300;
+		public bool iblShadows = true;
+		public float iblSpecularBoost = 1;
+		public bool iblSwapYZ = false;
+		public float iblTurnDome = 0;
 	}
 	
 	
