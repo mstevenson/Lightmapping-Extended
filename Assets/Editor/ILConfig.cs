@@ -125,16 +125,16 @@ public class ILConfig
 		public int autoThreadsSubtract = 0;
 		public int renderThreads = 2;
 		public bool dither = true;
-		public float inputGamma = 1.0;
+		public float inputGamma = 1.0f;
 		public OutputCorrection outputCorrection;
-		public TileScheme tileScheme = TilScheme.Hilbert;
+		public TileScheme tileScheme = TileScheme.Hilbert;
 		public bool premultiply = true;
-		public float premultiplyThreshold = 0.0;
+		public float premultiplyThreshold = 0.0f;
 		public OutputVerbosity outputVerbosity;
 	}
 	
 	[System.Serializable]
-	class OutputVerbosity
+	public class OutputVerbosity
 	{
 		public bool errorPrint = true;
 		public bool warningPrint = true;
@@ -146,9 +146,9 @@ public class ILConfig
 	}
 	
 	[System.Serializable]
-	class OutputCorrection
+	public class OutputCorrection
 	{
-		public ColorCorrection colorCorrection = None;
+		public ColorCorrection colorCorrection = ColorCorrection.None;
 		public float gamma = 1;
 	}
 	
@@ -202,15 +202,15 @@ public class ILConfig
 	
 	
 	[System.Serializable]
-	class RenderSettings {
-		public float bias = 0.005;
+	public class RenderSettings {
+		public float bias = 0.005f;
 		public int giTransparencyDepth = 2;
 		public bool ignoreLightLinks = false;
 		public int maxRayDepth = 6;
-		public int maxShadowRays = 4294967295;
+		public long maxShadowRays = 4294967295;
 		public int minShadowRays = 0;
 		public int reflectionDepth = 2;
-		public float reflectionThreshold = 0.001;
+		public float reflectionThreshold = 0.001f;
 		public int shadowDepth = 2;
 		public bool shadowsIgnoreLightLinks = false;
 		public int transparencyDepth = 50;
@@ -219,7 +219,7 @@ public class ILConfig
 		public bool tsOddUVFlipping = true;
 		public bool tsVertexNormalization = true;
 		public bool tsVertexOrthogonalization = true;
-		public float vertexMergeThreshold = 0.001;
+		public float vertexMergeThreshold = 0.001f;
 	}
 	
 	
@@ -309,10 +309,10 @@ public class ILConfig
 		public bool ignoreNonDiffuse = true;
 		public int prepassMaxSampleRate = 0;
 		public int prepassMinSampleRate = -4;
-		public Integrator primaryIntegrator = FinalGather;
+		public Integrator primaryIntegrator = Integrator.FinalGather;
 		public float primaryIntensity = 1;
 		public float primarySaturation = 1;
-		public float secondaryIntegrator = Integrator.PathTracer;
+		public Integrator secondaryIntegrator = Integrator.PathTracer;
 		public float secondaryIntensity = 1;
 		public float secondarySaturation = 1;
 		public float specularScale = 1;
@@ -338,18 +338,18 @@ public class ILConfig
 		public bool fgCheckVisibility = false;
 		public float fgCheckVisibilityDepth = 1;
 		public bool fgClampRadiance = false;
-		public float fgContrastThreshold = 0.1;
+		public float fgContrastThreshold = 0.1f;
 		public int fgDepth = 1;
 		public bool fgDisableMinRadius = false;
 		public int fgEstimatePoints = 15;
 		public bool fgExploitFrameCoherence = false;
 		public float fgFalloffExponent = 0;
-		public float fgGradientThreshold = 0.5;
+		public float fgGradientThreshold = 0.5f;
 		public int fgInterpolationPoints = 15;
 		public float fgLightLeakRadius = 0;
 		public bool fgLightLeakReduction = false;
 		public float fgMaxRayLength = 0;
-		public float fgNormalThreshold = 0.2;
+		public float fgNormalThreshold = 0.2f;
 		public bool fgPreview = true;
 		public int fgRays = 300;
 		public float fgSmooth = 1;
@@ -369,14 +369,14 @@ public class ILConfig
 		public float ptAccuracy = 1;
 		public bool ptCacheDirectLight = true;
 		public bool ptCheckVisibility = false;
-		public float ptConservativeEnergyLimit = 0.95;
-		public LMColor ptDefaultColor = new LMColor (0, 0, 0);
+		public float ptConservativeEnergyLimit = 0.95f;
+		public LMColor ptDefaultColor = new LMColor (0, 0, 0, 1);
 		public int ptDepth = 5;
 		public bool ptDiffuseIllum = true;
 		public string ptFile = "";
 		public float ptFilterSize = 3;
 		public PTFilterType ptFilterType = PTFilterType.Box;
-		public float ptNormalThreshold = 0.707;
+		public float ptNormalThreshold = 0.707f;
 		public float ptPointSize = 0;
 		public bool ptPrecalcIrradiance = true;
 		public bool ptPreview = true;
