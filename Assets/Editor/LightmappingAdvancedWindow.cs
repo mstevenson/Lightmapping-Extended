@@ -117,21 +117,21 @@ public class LightmappingAdvancedWindow : EditorWindow
 		}
 		{
 			EditorGUI.indentLevel = 1;
-			config.giSettings.fgPreview = EditorGUILayout.Toggle ("Fast Preview", config.giSettings.fgPreview);
-			config.giSettings.fgRays = EditorGUILayout.IntField ("Rays", config.giSettings.fgRays);
-			config.giSettings.fgContrastThreshold = EditorGUILayout.FloatField ("Contrast Threshold", config.giSettings.fgContrastThreshold);
-			config.giSettings.fgGradientThreshold = EditorGUILayout.FloatField ("Gradient Threshold", config.giSettings.fgGradientThreshold);
-			config.giSettings.fgInterpolationPoints = EditorGUILayout.IntSlider ("Interpolation Points", config.giSettings.fgInterpolationPoints, 1, 50);
-			config.giSettings.fgCheckVisibility = EditorGUILayout.Toggle ("Check Visibility", config.giSettings.fgCheckVisibility);
+			Toggle ("Fast Preview", config.giSettings.fgPreview);
+			IntField ("Rays", config.giSettings.fgRays);
+			FloatField ("Contrast Threshold", config.giSettings.fgContrastThreshold);
+			FloatField ("Gradient Threshold", config.giSettings.fgGradientThreshold);
+			IntSlider ("Interpolation Points", config.giSettings.fgInterpolationPoints, 1, 50);
+			Toggle ("Check Visibility", config.giSettings.fgCheckVisibility);
 			
 			EditorGUILayout.Space ();
 			
-			config.giSettings.fgDepth = EditorGUILayout.IntSlider ("Bounces", config.giSettings.fgDepth, 1, 10);
+			IntSlider ("Bounces", config.giSettings.fgDepth, 1, 10);
 			EditorGUI.indentLevel = 2;
-			config.giSettings.diffuseBoost = EditorGUILayout.FloatField ("Boost", config.giSettings.diffuseBoost);
-			config.giSettings.primaryIntensity = EditorGUILayout.FloatField ("Intensity", config.giSettings.primaryIntensity);
+			FloatField ("Boost", config.giSettings.diffuseBoost);
+			FloatField ("Intensity", config.giSettings.primaryIntensity);
 			LightmapEditorSettings.bounceIntensity = config.giSettings.primaryIntensity;
-			config.giSettings.primarySaturation = EditorGUILayout.FloatField ("Saturation", config.giSettings.primarySaturation);
+			FloatField ("Saturation", config.giSettings.primarySaturation);
 			EditorGUI.indentLevel = 1;
 			
 			EditorGUILayout.Space ();
@@ -173,12 +173,12 @@ public class LightmappingAdvancedWindow : EditorWindow
 		} else {
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
 		}
-		config.giSettings.secondaryIntensity = EditorGUILayout.FloatField ("Intensity", config.giSettings.secondaryIntensity);
-		config.giSettings.secondarySaturation = EditorGUILayout.FloatField ("Saturation", config.giSettings.secondarySaturation);
-		config.giSettings.ptAccuracy = EditorGUILayout.FloatField ("Accuracy", config.giSettings.ptAccuracy);
-		config.giSettings.ptPointSize = EditorGUILayout.FloatField ("Point Size", config.giSettings.ptPointSize);
-		config.giSettings.ptCacheDirectLight = EditorGUILayout.Toggle ("Cache Direct Light", config.giSettings.ptCacheDirectLight);
-		config.giSettings.ptCheckVisibility = EditorGUILayout.Toggle ("Check Visibility", config.giSettings.ptCheckVisibility);
+		FloatField ("Intensity", config.giSettings.secondaryIntensity);
+		FloatField ("Saturation", config.giSettings.secondarySaturation);
+		FloatField ("Accuracy", config.giSettings.ptAccuracy);
+		FloatField ("Point Size", config.giSettings.ptPointSize);
+		Toggle ("Cache Direct Light", config.giSettings.ptCacheDirectLight);
+		Toggle ("Check Visibility", config.giSettings.ptCheckVisibility);
 	}
 	
 	void EnvironmentGUI ()
@@ -204,19 +204,24 @@ public class LightmappingAdvancedWindow : EditorWindow
 	}
 	
 	
-	
-	void SurfaceTransferGUI ()
-	{
-		config.surfaceTransferSettings.selectionMode = (ILConfig.SurfaceTransferSettings.SelectionMode)EditorGUILayout.EnumPopup ("Selection Mode", config.surfaceTransferSettings.selectionMode);
-		config.surfaceTransferSettings.frontRange = EditorGUILayout.FloatField ("Front Range", config.surfaceTransferSettings.frontRange);
-		config.surfaceTransferSettings.frontBias = EditorGUILayout.FloatField ("Front Bias", config.surfaceTransferSettings.frontBias);
-		config.surfaceTransferSettings.backRange = EditorGUILayout.FloatField ("Back Range", config.surfaceTransferSettings.backRange);
-		config.surfaceTransferSettings.backBias = EditorGUILayout.FloatField ("Back Bias", config.surfaceTransferSettings.backBias);
-	}
-	
 	void TextureBakeGUI ()
 	{
 		
 	}
 	
+	
+	private void Toggle (ref bool val)
+	{
+		val = EditorGUILayout.Toggle ("Check Visibility", val);
+	}
+	
+	private void FloatField (ref float val)
+	{
+		val = EditorGUILayout.FloatField ("Check Visibility", val);
+	}
+	
+	private void IntField (ref int val)
+	{
+		val = EditorGUILayout.IntField ("Check Visibility", val);
+	}
 }

@@ -401,6 +401,23 @@ public class ILConfig
 	
 	
 	[System.Serializable]
+	public class ADSSettings
+	{
+		public enum Instancing {
+			None,
+			AutoDetect
+		}
+		
+		public int gridDensity = 1;
+	    public int gridMaxDepth = 4;
+	    public int gridThreshold = 25;
+	    public int instancingThreshold = 500;
+	    public Instancing useInstancing = Instancing.AutoDetect;
+	    public bool useSSE = true;
+	}
+	
+	
+	[System.Serializable]
 	public class SurfaceTransferSettings
 	{
 		public enum SelectionMode {
@@ -413,6 +430,7 @@ public class ILConfig
 		public float backBias = -1;
 		public SelectionMode selectionMode = SelectionMode.Normal;
 	}
+	
 	
 	[System.Serializable]
 	public class TextureBakeSettings
