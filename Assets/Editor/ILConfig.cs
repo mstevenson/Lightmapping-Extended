@@ -147,10 +147,10 @@ public class ILConfig
 			/// Used for development purposes.
 			/// </summary>
 			public bool debugPrint = false;
-//			/// <summary>
-//			/// Save all log messages to a file named debug.out.
-//			/// </summary>
-//			public bool debugFile = false;
+			/// <summary>
+			/// Save all log messages to a file named debug.out.
+			/// </summary>
+			public bool debugFile = false;
 		}
 	
 		[System.Serializable]
@@ -195,6 +195,11 @@ public class ILConfig
 		/// Different ways for Beast to distribute tiles over the image plane.
 		/// </summary>
 		public TileScheme tileScheme = TileScheme.Hilbert;
+		/// <summary>
+		/// A smaller tile gives better ray tracing coherence. There is no “best setting” for all scenes.
+		/// Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.
+		/// </summary>
+		public float tileSize = 32;
 		/// <summary>
 		/// If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel.
 		/// Note that disabling premultiply alpha gives poor result if used with environment maps and other

@@ -89,6 +89,40 @@ public class LightmappingAdvancedWindow : EditorWindow
 		PrimaryAndSecondaryRays = 1
 	}
 
+	void FrameSettingsGUI ()
+	{
+		Toggle ("Auto Detect CPUs", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
+		EditorGUI.indentLevel++;
+		if (config.frameSettings.autoThreads)
+			IntField ("Subtract Threads", ref config.frameSettings.autoThreadsSubtract, "If autoThreads is enabled, this can be used to decrease the number of utilized cores, e.g. to leave one or two cores free to do other work.");
+		else
+			IntField ("Render Threads", ref config.frameSettings.renderThreads, "If autoThreads is disabled, this will set the number of threads beast uses. One per core is a good start.");
+		EditorGUI.indentLevel--;
+
+		GUILayout.Space ();
+
+		config.frameSettings.tileScheme = (ILConfig.FrameSettings.TileScheme)EditorGUILayout.EnumPopup (new GUIContent ("Tile Scheme", "Different ways for Beast to distribute tiles over the image plane."), config.frameSettings.tileScheme);
+		IntField ("Tile Size", ref config.frameSettings.tileSize, "A smaller tile gives better ray tracing coherence. There is no “best setting” for all scenes. Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.");
+		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+		if (config.frameSettings.premultiply) {
+			FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be “un multiplied” when using premultiply alpha.");
+		}
+
+		GUILayout.Space ();
+
+		GUILayout.Label ("Output Verbosity");
+		EditorGUI.indentLevel++;
+		Toggle ("Debug File", ref config.frameSettings.outputVerbosity.debugFile, "Save all log messages to a file named debug.out.");
+		Toggle ("Debug Print", ref config.frameSettings.outputVerbosity.debugPrint, "Used for development purposes.");
+		Toggle ("Error Print", ref config.frameSettings.outputVerbosity.errorPrint, "");
+		Toggle ("Warning Print", ref config.frameSettings.outputVerbosity.warningPrint, "");
+		Toggle ("Benchmark Print", ref config.frameSettings.outputVerbosity.benchmarkPrint, "");
+		Toggle ("Progress Print", ref config.frameSettings.outputVerbosity.progressPrint, "");
+		Toggle ("Info Print", ref config.frameSettings.outputVerbosity.infoPrint, "");
+		Toggle ("Verbose Print", ref config.frameSettings.outputVerbosity.verbosePrint, "");
+		EditorGUI.indentLevel--;
+	}
+
 	void RenderSettingsGUI ()
 	{
 		GUILayout.Label ("Rays");
@@ -103,8 +137,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 		GUILayout.Label ("Shadows");
 		config.renderSettings.shadowDepth = (int)((ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ShadowDepth)System.Enum.Parse (typeof(ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
 		IntField ("Min Shadow Rays", ref config.renderSettings.minShadowRays, "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays.");
-		IntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
-
+		LongToIntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
 		GUILayout.Label ("Geometry");
 		FloatField ("Vertex Merge Threshold", ref config.renderSettings.vertexMergeThreshold, "Triangle vertices that are closer together than this threshold will be merged into one (if possible depending on other vertex data).");
 		Toggle ("Odd UV Flipping", ref config.renderSettings.tsOddUVFlipping, "Using this setting will force Beast to mirror tangent and binormal when UV has odd winding direction.");
@@ -129,7 +162,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.None;
 		}
 		{
-			EditorGUI.indentLevel = 1;
+			EditorGUI.indentLevel++;
 			Toggle ("Fast Preview", ref config.giSettings.fgPreview, "Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick preview of the final image lighting, reducing lighting setup time.");
 			IntField ("Rays", ref config.giSettings.fgRays, "Sets the maximum number of rays to use for each Final Gather sample point. A higher number gives higher quality, but longer rendering time.");
 			FloatField ("Contrast Threshold", ref config.giSettings.fgContrastThreshold, "Controls how sensitive the final gather should be for contrast differences between the points during pre calculation. If the contrast difference is above this threshold for neighbouring points, more points will be created in that area. This tells the algorithm to place points where they are really needed, e.g. at shadow boundaries or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high variance and hence a high contrast difference, so in that case you might need to increase the contrast threshold to prevent points from clumping together.");
@@ -140,12 +173,12 @@ public class LightmappingAdvancedWindow : EditorWindow
 			EditorGUILayout.Space ();
 			
 			IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10, "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used.");
-			EditorGUI.indentLevel = 2;
+			EditorGUI.indentLevel++;
 			FloatField ("Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
 			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
 			LightmapEditorSettings.bounceIntensity = config.giSettings.primaryIntensity;
 			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-			EditorGUI.indentLevel = 1;
+			EditorGUI.indentLevel--;
 			
 			EditorGUILayout.Space ();
 			
@@ -164,7 +197,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 	{
 		Slider ("Ambient Occlusion", ref config.giSettings.fgAOInfluence, 0, 1, "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution.");
 		LightmapEditorSettings.aoAmount = config.giSettings.fgAOInfluence;
-		EditorGUI.indentLevel = 2;
+		EditorGUI.indentLevel++;
 		if (config.giSettings.fgAOInfluence <= 0)
 			GUI.enabled = false;
 		
@@ -196,6 +229,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 	
 	void EnvironmentGUI ()
 	{
+		FloatField ("Intensity", ref config.environmentSettings.giEnvironmentIntensity, "");
 		config.environmentSettings.giEnvironment = (ILConfig.EnvironmentSettings.Environment)EditorGUILayout.EnumPopup ("Environment Type", config.environmentSettings.giEnvironment);
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None) {
 			GUI.enabled = false;
@@ -204,14 +238,44 @@ public class LightmappingAdvancedWindow : EditorWindow
 		}
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
 			
-		} else {
+		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
+			EditorGUI.indentLevel++;
+
 			EditorGUILayout.LabelField ("HDR Image", Path.GetFileName (config.environmentSettings.iblImageFile));
 			if (GUILayout.Button ("Choose Image")) {
 				config.environmentSettings.iblImageFile = EditorUtility.OpenFilePanel ("Select EXR or HDR file", "", "");
 				GUIUtility.ExitGUI ();
 			}
+			Slider ("Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
+			FloatField ("Blur", ref config.environmentSettings.iblGIEnvBlur, "Pre-blur the environment image for Global Illumination calculations. Can help to reduce noise and flicker in images rendered with Final Gather. May increase render time as it is blurred at render time. It is always cheaper to pre-blur the image itself in an external application before loading it into Beast.");
+
+			EditorGUILayout.Space ();
+
+			Toggle ("Emit Light", ref config.environmentSettings.iblEmitLight, "Turns on the expensive IBL implementation. This will generate a number of (iblSamples) directional lights from the image.");
+
+			Toggle ("Diffuse", ref config.environmentSettings.iblEmitDiffuse, "To remove diffuse lighting from IBL, set this to false. To get the diffuse lighting Final Gather could be used instead.");
+
+			Toggle ("Shadows", ref config.environmentSettings.iblShadows, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
+			if (config.environmentSettings.iblShadows) {
+				EditorGUI.indentLevel++;
+				FloatField ("Shadow Noise", ref config.environmentSettings.iblBandingVsNoise, "Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows flicker more in animations.");
+				EditorGUI.indentLevel--;
+			}
+			
+			Toggle ("Specular", ref config.environmentSettings.iblEmitSpecular, "To remove specular highlights from IBL, set this to false.");
+			if (config.environmentSettings.iblEmitSpecular) {
+				EditorGUI.indentLevel++;
+				FloatField ("Specular Boost", ref config.environmentSettings.iblSpecularBoost, "Further tweak the intensity by boosting the specular component.");
+				EditorGUI.indentLevel--;
+			}
+
+			EditorGUILayout.Space ();
+
+			IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
+			FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
+
+			EditorGUI.indentLevel--;
 		}
-		FloatField ("Intensity", ref config.environmentSettings.giEnvironmentIntensity, "");
 		
 		GUI.enabled = true;
 	}
@@ -222,9 +286,11 @@ public class LightmappingAdvancedWindow : EditorWindow
 		
 	}
 
+
+
 	private void Slider (string name, ref float val, float min, float max, string tooltip)
 	{
-		EditorGUILayout.Slider (new GUIContent (name, tooltip), val, min, max);
+		val = EditorGUILayout.Slider (new GUIContent (name, tooltip), val, min, max);
 	}
 	
 	private void Toggle (string name, ref bool val, string tooltip)
@@ -242,9 +308,13 @@ public class LightmappingAdvancedWindow : EditorWindow
 		val = EditorGUILayout.IntField (new GUIContent (name, tooltip), val);
 	}
 
+	private void LongToIntField (string name, ref long val, string tooltip)
+	{
+		val = (long)EditorGUILayout.IntField (new GUIContent (name, tooltip), (int)val);
+	}
+
 	private void IntSlider (string name, ref int val, int min, int max, string tooltip)
 	{
-		GUI.tooltip = tooltip;
 		val = EditorGUILayout.IntSlider (new GUIContent (name, tooltip), val, min, max);
 	}
 }

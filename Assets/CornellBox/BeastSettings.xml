@@ -33,7 +33,7 @@
     <vertexMergeThreshold>0.001</vertexMergeThreshold>
   </RenderSettings>
   <EnvironmentSettings>
-    <giEnvironment>SkyLight</giEnvironment>
+    <giEnvironment>IBL</giEnvironment>
     <skyLightColor>
       <r>0.86</r>
       <g>0.93</g>
@@ -45,7 +45,7 @@
     <iblEmitDiffuse>true</iblEmitDiffuse>
     <iblEmitLight>false</iblEmitLight>
     <iblEmitSpecular>false</iblEmitSpecular>
-    <iblGIEnvBlur>0.05</iblGIEnvBlur>
+    <iblGIEnvBlur>0.06</iblGIEnvBlur>
     <iblIntensity>1</iblIntensity>
     <iblSamples>300</iblSamples>
     <iblShadows>true</iblShadows>
