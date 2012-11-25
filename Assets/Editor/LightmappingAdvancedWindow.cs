@@ -117,21 +117,21 @@ public class LightmappingAdvancedWindow : EditorWindow
 		}
 		{
 			EditorGUI.indentLevel = 1;
-			Toggle ("Fast Preview", config.giSettings.fgPreview);
-			IntField ("Rays", config.giSettings.fgRays);
-			FloatField ("Contrast Threshold", config.giSettings.fgContrastThreshold);
-			FloatField ("Gradient Threshold", config.giSettings.fgGradientThreshold);
-			IntSlider ("Interpolation Points", config.giSettings.fgInterpolationPoints, 1, 50);
-			Toggle ("Check Visibility", config.giSettings.fgCheckVisibility);
+			Toggle ("Fast Preview", ref config.giSettings.fgPreview);
+			IntField ("Rays", ref config.giSettings.fgRays);
+			FloatField ("Contrast Threshold", ref config.giSettings.fgContrastThreshold);
+			FloatField ("Gradient Threshold", ref config.giSettings.fgGradientThreshold);
+			IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 50);
+			Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility);
 			
 			EditorGUILayout.Space ();
 			
-			IntSlider ("Bounces", config.giSettings.fgDepth, 1, 10);
+			IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10);
 			EditorGUI.indentLevel = 2;
-			FloatField ("Boost", config.giSettings.diffuseBoost);
-			FloatField ("Intensity", config.giSettings.primaryIntensity);
+			FloatField ("Boost", ref config.giSettings.diffuseBoost);
+			FloatField ("Intensity", ref config.giSettings.primaryIntensity);
 			LightmapEditorSettings.bounceIntensity = config.giSettings.primaryIntensity;
-			FloatField ("Saturation", config.giSettings.primarySaturation);
+			FloatField ("Saturation", ref config.giSettings.primarySaturation);
 			EditorGUI.indentLevel = 1;
 			
 			EditorGUILayout.Space ();
@@ -173,12 +173,12 @@ public class LightmappingAdvancedWindow : EditorWindow
 		} else {
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
 		}
-		FloatField ("Intensity", config.giSettings.secondaryIntensity);
-		FloatField ("Saturation", config.giSettings.secondarySaturation);
-		FloatField ("Accuracy", config.giSettings.ptAccuracy);
-		FloatField ("Point Size", config.giSettings.ptPointSize);
-		Toggle ("Cache Direct Light", config.giSettings.ptCacheDirectLight);
-		Toggle ("Check Visibility", config.giSettings.ptCheckVisibility);
+		FloatField ("Intensity", ref config.giSettings.secondaryIntensity);
+		FloatField ("Saturation", ref config.giSettings.secondarySaturation);
+		FloatField ("Accuracy", ref config.giSettings.ptAccuracy);
+		FloatField ("Point Size", ref config.giSettings.ptPointSize);
+		Toggle ("Cache Direct Light", ref config.giSettings.ptCacheDirectLight);
+		Toggle ("Check Visibility", ref config.giSettings.ptCheckVisibility);
 	}
 	
 	void EnvironmentGUI ()
@@ -210,18 +210,23 @@ public class LightmappingAdvancedWindow : EditorWindow
 	}
 	
 	
-	private void Toggle (ref bool val)
+	private void Toggle (string name, ref bool val)
 	{
-		val = EditorGUILayout.Toggle ("Check Visibility", val);
+		val = EditorGUILayout.Toggle (name, val);
 	}
 	
-	private void FloatField (ref float val)
+	private void FloatField (string name, ref float val)
 	{
-		val = EditorGUILayout.FloatField ("Check Visibility", val);
+		val = EditorGUILayout.FloatField (name, val);
 	}
 	
-	private void IntField (ref int val)
+	private void IntField (string name, ref int val)
 	{
-		val = EditorGUILayout.IntField ("Check Visibility", val);
+		val = EditorGUILayout.IntField (name, val);
+	}
+
+	private void IntSlider (string name, ref int val, int min, int max)
+	{
+		val = EditorGUILayout.IntSlider (name, val, min, max);
 	}
 }

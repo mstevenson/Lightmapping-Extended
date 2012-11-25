@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <ILConfig>
   <AASettings>
-    <samplingMode>Adaptive</samplingMode>
-    <clamp>false</clamp>
-    <contrast>0.1</contrast>
-    <diagnose>false</diagnose>
     <minSampleRate>0</minSampleRate>
     <maxSampleRate>2</maxSampleRate>
+    <contrast>0.1</contrast>
+    <diagnose>false</diagnose>
+    <clamp>false</clamp>
+    <samplingMode>Adaptive</samplingMode>
     <filter>Gauss</filter>
     <filterSize>
       <x>2.2</x>
@@ -41,6 +41,17 @@
       <a>1</a>
     </skyLightColor>
     <giEnvironmentIntensity>0</giEnvironmentIntensity>
+    <iblBandingVsNoise>1</iblBandingVsNoise>
+    <iblEmitDiffuse>true</iblEmitDiffuse>
+    <iblEmitLight>false</iblEmitLight>
+    <iblEmitSpecular>false</iblEmitSpecular>
+    <iblGIEnvBlur>0.05</iblGIEnvBlur>
+    <iblIntensity>1</iblIntensity>
+    <iblSamples>300</iblSamples>
+    <iblShadows>true</iblShadows>
+    <iblSpecularBoost>1</iblSpecularBoost>
+    <iblSwapYZ>false</iblSwapYZ>
+    <iblTurnDome>0</iblTurnDome>
   </EnvironmentSettings>
   <FrameSettings>
     <autoThreads>true</autoThreads>
