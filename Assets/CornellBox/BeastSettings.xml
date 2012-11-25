@@ -84,7 +84,6 @@
     <fgAOMaxDistance>0.223798</fgAOMaxDistance>
     <fgAOScale>2.0525</fgAOScale>
     <fgAOVisualize>false</fgAOVisualize>
-    <fgAccuracy>1</fgAccuracy>
     <fgAttenuationStart>0</fgAttenuationStart>
     <fgAttenuationStop>0</fgAttenuationStop>
     <fgCacheDirectLight>false</fgCacheDirectLight>
@@ -93,7 +92,6 @@
     <fgClampRadiance>false</fgClampRadiance>
     <fgContrastThreshold>0.05</fgContrastThreshold>
     <fgDepth>1</fgDepth>
-    <fgDisableMinRadius>false</fgDisableMinRadius>
     <fgEstimatePoints>15</fgEstimatePoints>
     <fgExploitFrameCoherence>false</fgExploitFrameCoherence>
     <fgFalloffExponent>0</fgFalloffExponent>
@@ -105,9 +103,7 @@
     <fgNormalThreshold>0.2</fgNormalThreshold>
     <fgPreview>false</fgPreview>
     <fgRays>1000</fgRays>
-    <fgSmooth>1</fgSmooth>
     <fgUseCache>Irradiance</fgUseCache>
-    <fgUseLegacy>false</fgUseLegacy>
     <ptAccuracy>1</ptAccuracy>
     <ptCacheDirectLight>true</ptCacheDirectLight>
     <ptCheckVisibility>false</ptCheckVisibility>
@@ -130,7 +126,7 @@
     <ptSpecularIllum>true</ptSpecularIllum>
     <ptTransmissiveIllum>true</ptTransmissiveIllum>
     <mcDepth>2</mcDepth>
-    <mcRayLength>0</mcRayLength>
+    <mcMaxRayLength>0</mcMaxRayLength>
     <mcRays>16</mcRays>
   </GISettings>
   <SurfaceTransferSettings>
