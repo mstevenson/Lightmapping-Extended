@@ -22,7 +22,7 @@
     <minShadowRays>0</minShadowRays>
     <reflectionDepth>2</reflectionDepth>
     <reflectionThreshold>0.001</reflectionThreshold>
-    <shadowDepth>2</shadowDepth>
+    <shadowDepth>1</shadowDepth>
     <shadowsIgnoreLightLinks>false</shadowsIgnoreLightLinks>
     <transparencyDepth>50</transparencyDepth>
     <tsIntersectionNormalization>true</tsIntersectionNormalization>
@@ -60,6 +60,7 @@
     <dither>true</dither>
     <inputGamma>1</inputGamma>
     <tileScheme>Hilbert</tileScheme>
+    <tileSize>32</tileSize>
     <premultiply>true</premultiply>
     <premultiplyThreshold>0</premultiplyThreshold>
   </FrameSettings>

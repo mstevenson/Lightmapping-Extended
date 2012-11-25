@@ -199,7 +199,7 @@ public class ILConfig
 		/// A smaller tile gives better ray tracing coherence. There is no “best setting” for all scenes.
 		/// Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.
 		/// </summary>
-		public float tileSize = 32;
+		public int tileSize = 32;
 		/// <summary>
 		/// If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel.
 		/// Note that disabling premultiply alpha gives poor result if used with environment maps and other

@@ -46,16 +46,20 @@ public class LightmappingAdvancedWindow : EditorWindow
 			}
 		}
 		
-		selected = GUILayout.SelectionGrid (selected, new string[] {"Global Illumination", "Environment"}, 3);
+		selected = GUILayout.SelectionGrid (selected, new string[] {"Render Settings", "Frame Settings", "Global Illumination", "Environment"}, 3);
 		EditorGUILayout.Space ();
 		switch (selected) {
 		case 0:
-			GlobalIlluminationGUI ();
+			RenderSettingsGUI ();
 			break;
 		case 1:
-			EnvironmentGUI ();
+			FrameSettingsGUI ();
 			break;
 		case 2:
+			GlobalIlluminationGUI ();
+			break;
+		case 3:
+			EnvironmentGUI ();
 			break;
 		}
 		
@@ -85,66 +89,90 @@ public class LightmappingAdvancedWindow : EditorWindow
 	
 
 	public enum ShadowDepth {
-		PrimaryRays = 0,
-		PrimaryAndSecondaryRays = 1
+		PrimaryRays = 1,
+		PrimaryAndSecondaryRays = 2
 	}
 
 	void FrameSettingsGUI ()
 	{
-		Toggle ("Auto Detect CPUs", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
+		GUILayout.Label ("CPU", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
+		Toggle ("Auto Threads", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
+		EditorGUI.indentLevel++;
+		if (!config.frameSettings.autoThreads)
+			GUI.enabled = false;
+		IntField ("Subtract Threads", ref config.frameSettings.autoThreadsSubtract, "If autoThreads is enabled, this can be used to decrease the number of utilized cores, e.g. to leave one or two cores free to do other work.");
+		GUI.enabled = true;
 		if (config.frameSettings.autoThreads)
-			IntField ("Subtract Threads", ref config.frameSettings.autoThreadsSubtract, "If autoThreads is enabled, this can be used to decrease the number of utilized cores, e.g. to leave one or two cores free to do other work.");
-		else
-			IntField ("Render Threads", ref config.frameSettings.renderThreads, "If autoThreads is disabled, this will set the number of threads beast uses. One per core is a good start.");
+			GUI.enabled = false;
+		IntField ("Render Threads", ref config.frameSettings.renderThreads, "If autoThreads is disabled, this will set the number of threads beast uses. One per core is a good start.");
+		GUI.enabled = true;
+		EditorGUI.indentLevel--;
 		EditorGUI.indentLevel--;
 
-		GUILayout.Space ();
-
+		GUILayout.Label ("Tiles", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		config.frameSettings.tileScheme = (ILConfig.FrameSettings.TileScheme)EditorGUILayout.EnumPopup (new GUIContent ("Tile Scheme", "Different ways for Beast to distribute tiles over the image plane."), config.frameSettings.tileScheme);
 		IntField ("Tile Size", ref config.frameSettings.tileSize, "A smaller tile gives better ray tracing coherence. There is no “best setting” for all scenes. Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.");
-		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
-		if (config.frameSettings.premultiply) {
-			FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be “un multiplied” when using premultiply alpha.");
-		}
-
-		GUILayout.Space ();
-
-		GUILayout.Label ("Output Verbosity");
-		EditorGUI.indentLevel++;
-		Toggle ("Debug File", ref config.frameSettings.outputVerbosity.debugFile, "Save all log messages to a file named debug.out.");
-		Toggle ("Debug Print", ref config.frameSettings.outputVerbosity.debugPrint, "Used for development purposes.");
-		Toggle ("Error Print", ref config.frameSettings.outputVerbosity.errorPrint, "");
-		Toggle ("Warning Print", ref config.frameSettings.outputVerbosity.warningPrint, "");
-		Toggle ("Benchmark Print", ref config.frameSettings.outputVerbosity.benchmarkPrint, "");
-		Toggle ("Progress Print", ref config.frameSettings.outputVerbosity.progressPrint, "");
-		Toggle ("Info Print", ref config.frameSettings.outputVerbosity.infoPrint, "");
-		Toggle ("Verbose Print", ref config.frameSettings.outputVerbosity.verbosePrint, "");
 		EditorGUI.indentLevel--;
+
+		EditorGUILayout.Space ();
+
+		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+		if (!config.frameSettings.premultiply) {
+			GUI.enabled = false;
+		}
+		EditorGUI.indentLevel++;
+		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be “un multiplied” when using premultiply alpha.");
+		EditorGUI.indentLevel--;
+		GUI.enabled = true;
+
+		EditorGUILayout.Space ();
+
+//		GUILayout.Label ("Output Verbosity");
+//		EditorGUI.indentLevel++;
+//		Toggle ("Debug File", ref config.frameSettings.outputVerbosity.debugFile, "Save all log messages to a file named debug.out.");
+//		Toggle ("Debug Print", ref config.frameSettings.outputVerbosity.debugPrint, "Used for development purposes.");
+//		Toggle ("Error Print", ref config.frameSettings.outputVerbosity.errorPrint, "");
+//		Toggle ("Warning Print", ref config.frameSettings.outputVerbosity.warningPrint, "");
+//		Toggle ("Benchmark Print", ref config.frameSettings.outputVerbosity.benchmarkPrint, "");
+//		Toggle ("Progress Print", ref config.frameSettings.outputVerbosity.progressPrint, "");
+//		Toggle ("Info Print", ref config.frameSettings.outputVerbosity.infoPrint, "");
+//		Toggle ("Verbose Print", ref config.frameSettings.outputVerbosity.verbosePrint, "");
+//		EditorGUI.indentLevel--;
 	}
 
 	void RenderSettingsGUI ()
 	{
-		GUILayout.Label ("Rays");
+		GUILayout.Label ("Rays", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		IntField ("Max Bounces", ref config.renderSettings.maxRayDepth, "The maximum amount of ”bounces” a ray can have before being considered done. A bounce can be a reflection or refraction.");
 		FloatField ("Bias", ref config.renderSettings.bias, "An error threshold to avoid double intersections. For example, a shadow ray should not intersect the same triangle as the primary ray did, but because of limited numerical precision this can happen. The bias value moves the intersection point to eliminate this problem. If set to zero this value is computed automatically depending on the scene size.");
+		EditorGUI.indentLevel--;
 
-		GUILayout.Label ("Reflections & Transparency");
+		GUILayout.Label ("Reflections & Transparency", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		IntField ("Max Reflection Bounces", ref config.renderSettings.reflectionDepth, "The maximum amount of reflections a ray can have before being considered done.");
 		FloatField ("Reflection Threshold", ref config.renderSettings.reflectionThreshold, "If the intensity of the reflected contribution is less than the threshold, the ray will be terminated.");
 		IntField ("GI Transparency Depth", ref config.renderSettings.giTransparencyDepth, "Controls the maximum transparency depth for Global Illumination rays. Used to speed up renderings with a lot of transparency (for example trees).");
+		EditorGUI.indentLevel--;
 
-		GUILayout.Label ("Shadows");
+		GUILayout.Label ("Shadows", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		config.renderSettings.shadowDepth = (int)((ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ShadowDepth)System.Enum.Parse (typeof(ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
 		IntField ("Min Shadow Rays", ref config.renderSettings.minShadowRays, "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays.");
 		LongToIntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
-		GUILayout.Label ("Geometry");
+		EditorGUI.indentLevel--;
+
+		GUILayout.Label ("Geometry", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		FloatField ("Vertex Merge Threshold", ref config.renderSettings.vertexMergeThreshold, "Triangle vertices that are closer together than this threshold will be merged into one (if possible depending on other vertex data).");
 		Toggle ("Odd UV Flipping", ref config.renderSettings.tsOddUVFlipping, "Using this setting will force Beast to mirror tangent and binormal when UV has odd winding direction.");
 		Toggle ("Vertex Orthogonalization", ref config.renderSettings.tsVertexOrthogonalization, "Orthogonalize tangent space basis vectors (tangent, binormal and normal) at every vertex.");
 		Toggle ("Vertex Normalization", ref config.renderSettings.tsVertexNormalization, "Normalize tangent space basis vectors (tangent, binormal and normal) at every vertex.");
 		Toggle ("Intersection Orthogonalization", ref config.renderSettings.tsIntersectionOrthogonalization, "Orthogonalize tangent space basis vectors (tangent, binormal and normal) at every intersection point.");
 		Toggle ("Intersection Normalization", ref config.renderSettings.tsIntersectionNormalization, "Normalize tangent space basis vectors (tangent, binormal and normal) at every intersection point.");
+		EditorGUI.indentLevel--;
 	}
 	
 	void GlobalIlluminationGUI ()
