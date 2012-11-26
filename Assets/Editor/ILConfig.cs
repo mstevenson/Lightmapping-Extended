@@ -252,7 +252,7 @@ public class ILConfig
 		/// samples setting higher than this value, but will not raise the number if shadow samples
 		/// is set to a lower value.
 		/// </summary>
-		public long maxShadowRays = 4294967295;
+		public int maxShadowRays = 10000;
 		/// <summary>
 		/// The minimum number of shadow rays that will be sent to determine if a point is lit by a
 		/// specific light source. Use this value to ensure that you get enough quality in soft shadows
@@ -370,12 +370,12 @@ public class ILConfig
 		/// <summary>
 		/// The sub-pixel filter to use. The following filters are available (default value is Box):
 		/// </summary>
-		public Filter filter = Filter.Box;
+		public Filter filter = Filter.Gauss;
 		/// <summary>
 		/// The width and height of the filter kernel in pixels, given by setting the sub elements x and y (float).
 		/// Default value is 1.0 for both x and y.
 		/// </summary>
-		public LMVec2 filterSize = new LMVec2 (1, 1);
+		public LMVec2 filterSize = new LMVec2 (2.2f, 2.2f);
 	}
 	
 	
@@ -640,11 +640,11 @@ public class ILConfig
 		/// Max distance for the occlusion. Beyond this distance a ray is considered to be visible.
 		/// Can be used to avoid full occlusion for closed scenes.
 		/// </summary>
-		public float fgAOMaxDistance = 0;
+		public float fgAOMaxDistance = 0.3f;
 		/// <summary>
 		/// A scaling of the occlusion values. Can be used to increase or decrease the shadowing effect.
 		/// </summary>
-		public float fgAOScale = 1;
+		public float fgAOScale = 2;
 		/// <summary>
 		/// Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.
 		/// </summary>
@@ -689,7 +689,7 @@ public class ILConfig
 		/// final gather rays are used, the points will have high variance and hence a high contrast difference,
 		/// so in that case you might need to increase the contrast threshold to prevent points from clumping together.
 		/// </summary>
-		public float fgContrastThreshold = 0.1f;
+		public float fgContrastThreshold = 0.05f;
 		/// <summary>
 		/// Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce
 		/// more global illumination effects, but note that it can be quite slow since the number of rays will increase
@@ -757,7 +757,7 @@ public class ILConfig
 		/// Sets the maximum number of rays to use for each Final Gather sample point.
 		/// A higher number gives higher quality, but longer rendering time.
 		/// </summary>
-		public int fgRays = 300;
+		public int fgRays = 1000;
 		/// <summary>
 		/// Selects what caching method to use for final gathering.
 		/// </summary>
@@ -790,7 +790,7 @@ public class ILConfig
 		/// hence can affect the quality of the lighting. For instance indirect light bounces from specular
 		/// highlights might be lost.
 		/// </summary>
-		public bool ptCacheDirectLight = true;
+		public bool ptCacheDirectLight = false;
 		/// <summary>
 		/// Turn this on to reduce light leakage through walls. When points are collected to interpolate between,
 		/// some of them can be located on the other side of geometry. As a result light will bleed through the
@@ -813,7 +813,7 @@ public class ILConfig
 		/// Selects the filter to use when querying the cache during rendering. None will return the closest
 		/// cache point (unfiltered). The filter type can be set to None, Box, Gauss or Triangle.
 		/// </summary>
-		public PTFilterType ptFilterType = PTFilterType.Box;
+		public PTFilterType ptFilterType = PTFilterType.Gauss;
 		/// <summary>
 		/// Sets the amount of normal deviation that is allowed during cache point filtering. ptFilterType
 		/// Selects the filter to use when querying the cache during rendering. None will return the closest
@@ -827,14 +827,14 @@ public class ILConfig
 		/// </summary>
 		public float ptPointSize = 0;
 		/// <summary>
-		///  enabled the cache points will be pre-filtered before the final pass starts. This increases the
+		/// If enabled the cache points will be pre-filtered before the final pass starts. This increases the
 		/// performance using the final render pass.
 		/// </summary>
 		public bool ptPrecalcIrradiance = true;
 		/// <summary>
 		/// If enabled the pre-render pass will be visible in the render view.
 		/// </summary>
-		public bool ptPreview = true;
+		public bool ptPreview = false;
 		public bool ptSpecularIllum = true;
 		public bool ptTransmissiveIllum = true;
 		
@@ -934,7 +934,7 @@ public class ILConfig
 		/// <summary>
 		/// Expands the lightmap with the number of pixels specified to avoid black borders.
 		/// </summary>
-		public float edgeDilation = 3;
+		public int edgeDilation = 3;
 	}
 }
 

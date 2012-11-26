@@ -60,7 +60,8 @@ public class LightmappingAdvancedWindow : EditorWindow
 
 		switch (selected) {
 		case 0:
-			FrameSettingsGUI ();
+			PerformanceSettingsGUI ();
+			TextureBakeGUI ();
 			RenderSettingsGUI ();
 			break;
 		case 1:
@@ -101,7 +102,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 		PrimaryAndSecondaryRays = 2
 	}
 
-	void FrameSettingsGUI ()
+	void PerformanceSettingsGUI ()
 	{
 		// Threads
 		GUILayout.Label ("Threads", EditorStyles.boldLabel);
@@ -124,17 +125,6 @@ public class LightmappingAdvancedWindow : EditorWindow
 //		config.frameSettings.tileScheme = (ILConfig.FrameSettings.TileScheme)EditorGUILayout.EnumPopup (new GUIContent ("Tile Scheme", "Different ways for Beast to distribute tiles over the image plane."), config.frameSettings.tileScheme);
 //		IntField ("Tile Size", ref config.frameSettings.tileSize, "A smaller tile gives better ray tracing coherence. There is no 'best setting' for all scenes. Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.");
 //		EditorGUI.indentLevel--;
-
-		// Premultiplication
-		GUILayout.Label ("Premultiplication", EditorStyles.boldLabel);
-		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
-		EditorGUI.indentLevel++;
-		if (!config.frameSettings.premultiply) {
-			GUI.enabled = false;
-		}
-		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
-		EditorGUI.indentLevel--;
-		GUI.enabled = true;
 
 		EditorGUILayout.Space ();
 
@@ -170,7 +160,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 		EditorGUI.indentLevel++;
 		config.renderSettings.shadowDepth = (int)((ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ShadowDepth)System.Enum.Parse (typeof(ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
 		IntField ("Min Shadow Rays", ref config.renderSettings.minShadowRays, "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays.");
-		LongToIntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
+		IntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
 		EditorGUI.indentLevel--;
 
 		GUILayout.Label ("Geometry", EditorStyles.boldLabel);
@@ -257,22 +247,12 @@ public class LightmappingAdvancedWindow : EditorWindow
 			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
-
-		Toggle ("Fast Preview", ref config.giSettings.fgPreview, "Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick preview of the final image lighting, reducing lighting setup time.");
-		IntField ("Rays", ref config.giSettings.fgRays, "Sets the maximum number of rays to use for each Final Gather sample point. A higher number gives higher quality, but longer rendering time.");
-		FloatField ("Contrast Threshold", ref config.giSettings.fgContrastThreshold, "Controls how sensitive the final gather should be for contrast differences between the points during pre calculation. If the contrast difference is above this threshold for neighbouring points, more points will be created in that area. This tells the algorithm to place points where they are really needed, e.g. at shadow boundaries or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high variance and hence a high contrast difference, so in that case you might need to increase the contrast threshold to prevent points from clumping together.");
-		FloatField ("Gradient Threshold", ref config.giSettings.fgGradientThreshold, "Controls how the irradiance gradient is used in the interpolation. Each point stores it's irradiance gradient which can be used to improve the interpolation. However in some situations using the gradient can result in white 'halos' and other artifacts. This threshold can be used to reduce those artifacts.");
-		FloatField ("Normal Threshold", ref config.giSettings.fgNormalThreshold, "Controls how sensitive the final gather should be for differences in the points normals. A lower value will give more points in areas of high curvature.");
-		IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 50, "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below.");
-		Toggle ("Clamp Radiance", ref config.giSettings.fgClampRadiance, "Turn this on to clamp the sampled values to [0, 1]. This will reduce high frequency noise when Final Gather is used together with other Global Illumination algorithms.");
-		Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
-		Toggle ("Cache Direct Light", ref config.giSettings.fgCacheDirectLight, "When this is enabled final gather will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost. However this caching is only done for depths higher than 1, so the quality of direct light and shadows in the light map will not be reduced.");
 		
-		EditorGUILayout.Space ();
-
 		// Rays
+
 		GUILayout.Label ("Rays", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
+		IntField ("Rays", ref config.giSettings.fgRays, "Sets the maximum number of rays to use for each Final Gather sample point. A higher number gives higher quality, but longer rendering time.");
 		FloatField ("Max Ray Length", ref config.giSettings.fgMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
 		MinMaxField ("Attenuation Range", ref config.giSettings.fgAttenuationStart, ref config.giSettings.fgAttenuationStop, "The distance between which attenuation begins and fades to zero. There is no attenuation before this range, and no intensity beyond it. If zero, there will be no attenuation.");
 		EditorGUI.indentLevel++;
@@ -288,10 +268,20 @@ public class LightmappingAdvancedWindow : EditorWindow
 		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10, "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used.");
-		FloatField ("Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
+		FloatField ("Bounce Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
 		EditorGUI.indentLevel--;
 
-		EditorGUILayout.Space ();
+		// Points
+
+		GUILayout.Label ("Points", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
+		IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 50, "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below.");
+		FloatField ("Contrast Threshold", ref config.giSettings.fgContrastThreshold, "Controls how sensitive the final gather should be for contrast differences between the points during pre calculation. If the contrast difference is above this threshold for neighbouring points, more points will be created in that area. This tells the algorithm to place points where they are really needed, e.g. at shadow boundaries or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high variance and hence a high contrast difference, so in that case you might need to increase the contrast threshold to prevent points from clumping together.");
+		FloatField ("Gradient Threshold", ref config.giSettings.fgGradientThreshold, "Controls how the irradiance gradient is used in the interpolation. Each point stores it's irradiance gradient which can be used to improve the interpolation. However in some situations using the gradient can result in white 'halos' and other artifacts. This threshold can be used to reduce those artifacts.");
+		FloatField ("Normal Threshold", ref config.giSettings.fgNormalThreshold, "Controls how sensitive the final gather should be for differences in the points normals. A lower value will give more points in areas of high curvature.");
+		Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
+		Toggle ("Clamp Radiance", ref config.giSettings.fgClampRadiance, "Turn this on to clamp the sampled values to [0, 1]. This will reduce high frequency noise when Final Gather is used together with other Global Illumination algorithms.");
+		EditorGUI.indentLevel--;
 		
 		// Ambient Occlusion
 
@@ -307,8 +297,13 @@ public class LightmappingAdvancedWindow : EditorWindow
 		FloatField ("Max Distance", ref config.giSettings.fgAOMaxDistance, "Max distance for the occlusion. Beyond this distance a ray is considered to be visible. Can be used to avoid full occlusion for closed scenes.");
 		LightmapEditorSettings.aoMaxDistance = config.giSettings.fgAOMaxDistance;
 		FloatField ("Scale", ref config.giSettings.fgAOScale, "A scaling of the occlusion values. Can be used to increase or decrease the shadowing effect.");
-		
 		GUI.enabled = true;
+
+		// Performance
+
+		GUILayout.Label ("Performance", EditorStyles.boldLabel);
+		Toggle ("Fast Preview", ref config.giSettings.fgPreview, "Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick preview of the final image lighting, reducing lighting setup time.");
+		Toggle ("Cache Direct Light", ref config.giSettings.fgCacheDirectLight, "When this is enabled final gather will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost. However this caching is only done for depths higher than 1, so the quality of direct light and shadows in the light map will not be reduced.");
 	}
 	
 	void PathTracerSettings (bool isPrimaryIntegrator)
@@ -318,24 +313,27 @@ public class LightmappingAdvancedWindow : EditorWindow
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 
-		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
-		EditorGUI.indentLevel++;
+		Slider ("Accuracy", ref config.giSettings.ptAccuracy, 0, 4, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
-		EditorGUI.indentLevel--;
-		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
+		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
+
+		// Points
+
+		GUILayout.Label ("Points", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		FloatField ("Point Size", ref config.giSettings.ptPointSize, "Sets the maximum distance between the points in the path tracer cache. If set to 0 a value will be calculated automatically based on the size of the scene. The automatic value will be printed out during rendering, which is a good starting value if the point spacing needs to be adjusted.");
 		FloatField ("Normal Threshold", ref config.giSettings.ptNormalThreshold, "Sets the amount of normal deviation that is allowed during cache point filtering.");
-		Toggle ("Cache Direct Light", ref config.giSettings.ptCacheDirectLight, "When this is enabled the path tracer will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost.");
-		Toggle ("Check Visibility", ref config.giSettings.ptCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
-		Toggle ("Cache Direct Light", ref config.giSettings.ptCacheDirectLight, "When this is enabled the path tracer will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost.");
-
-		// Filter
-
-		GUILayout.Label ("Filter", EditorStyles.boldLabel);
-		EditorGUI.indentLevel++;
 		config.giSettings.ptFilterType = (ILConfig.GISettings.PTFilterType)EditorGUILayout.EnumPopup (new GUIContent ("Filter Type", "Selects the filter to use when querying the cache during rendering. None will return the closest cache point (unfiltered)."), config.giSettings.ptFilterType);
 		FloatField ("Filter Size", ref config.giSettings.ptFilterSize, "Sets the size of the filter as a multiplier of the Cache Point Spacing value. For example; a value of 3.0 will use a filter that is three times larges then the cache point spacing. If this value is below 1.0 there is no guarantee that any cache point is found. If no cache point is found the Default Color will be returned instead for that query.");
+		Toggle ("Check Visibility", ref config.giSettings.ptCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
 		EditorGUI.indentLevel--;
+
+		// Performance
+
+		GUILayout.Label ("Performance", EditorStyles.boldLabel);
+		Toggle ("Fast Preview", ref config.giSettings.ptPreview, "If enabled the pre-render pass will be visible in the render view.");
+		Toggle ("Cache Direct Light", ref config.giSettings.ptCacheDirectLight, "When this is enabled the path tracer will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost.");
+		Toggle ("Precalc Irradiance", ref config.giSettings.ptPrecalcIrradiance, "If enabled the cache points will be pre-filtered before the final pass starts. This increases the performance using the final render pass.");
 	}
 
 	void MonteCarloSettings (bool isPrimaryIntegrator)
@@ -347,7 +345,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 
 		IntField ("Rays", ref config.giSettings.mcRays, "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time.");
 		FloatField ("Ray Length", ref config.giSettings.mcMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
-		IntSlider ("Bounces", ref config.giSettings.mcDepth, 1, 10, "Sets the number of indirect light bounces calculated by monte carlo.");
+		IntSlider ("Bounces", ref config.giSettings.mcDepth, 1, 20, "Sets the number of indirect light bounces calculated by monte carlo.");
 	}
 	
 	void EnvironmentGUI ()
@@ -364,7 +362,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 		FloatField ("Intensity", ref config.environmentSettings.giEnvironmentIntensity, "");
 
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
-			
+			LMColorPicker ("Sky Light Color", ref config.environmentSettings.skyLightColor, "It is often a good idea to keep the color below 1.0 in intensity to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.");
 		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
 
 			EditorGUILayout.LabelField ("HDR Image", Path.GetFileName (config.environmentSettings.iblImageFile));
@@ -408,10 +406,33 @@ public class LightmappingAdvancedWindow : EditorWindow
 	
 	void TextureBakeGUI ()
 	{
-		
+		GUILayout.Label ("Texture", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
+
+		LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "Counteract unwanted light seams for tightly packed UV patches.");
+		IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
+
+		// Premultiplication
+		GUILayout.Label ("Premultiplication", EditorStyles.boldLabel);
+		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+		EditorGUI.indentLevel++;
+		if (!config.frameSettings.premultiply) {
+			GUI.enabled = false;
+		}
+		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
+		EditorGUI.indentLevel--;
+		GUI.enabled = true;
+
+		EditorGUI.indentLevel--;
 	}
 
 
+
+	private void LMColorPicker (string name, ref ILConfig.LMColor color, string tooltip)
+	{
+		Color c = EditorGUILayout.ColorField (new GUIContent (name, tooltip), new Color (color.r, color.g, color.b, color.a));
+		color = new ILConfig.LMColor (c.r, c.g, c.b, c.a);
+	}
 
 	private void Slider (string name, ref float val, float min, float max, string tooltip)
 	{
@@ -433,10 +454,10 @@ public class LightmappingAdvancedWindow : EditorWindow
 		val = EditorGUILayout.IntField (new GUIContent (name, tooltip), val);
 	}
 
-	private void LongToIntField (string name, ref long val, string tooltip)
-	{
-		val = (long)EditorGUILayout.IntField (new GUIContent (name, tooltip), (int)val);
-	}
+//	private void LongToIntField (string name, ref long val, string tooltip)
+//	{
+//		val = (long)EditorGUILayout.IntField (new GUIContent (name, tooltip), (int)val);
+//	}
 
 	private void IntSlider (string name, ref int val, int min, int max, string tooltip)
 	{
