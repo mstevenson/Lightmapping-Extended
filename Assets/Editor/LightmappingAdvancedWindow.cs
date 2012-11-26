@@ -53,22 +53,20 @@ public class LightmappingAdvancedWindow : EditorWindow
 		if (config == null)
 			return;
 
-		selected = GUILayout.SelectionGrid (selected, new string[] {"Render Settings", "Frame Settings", "Global Illumination", "Environment"}, 2);
+		selected = GUILayout.SelectionGrid (selected, new string[] {"Settings", "Global Illumination", "Environment"}, 2);
 		EditorGUILayout.Space ();
 
 		scroll = EditorGUILayout.BeginScrollView (scroll);
 
 		switch (selected) {
 		case 0:
+			FrameSettingsGUI ();
 			RenderSettingsGUI ();
 			break;
 		case 1:
-			FrameSettingsGUI ();
-			break;
-		case 2:
 			GlobalIlluminationGUI ();
 			break;
-		case 3:
+		case 2:
 			EnvironmentGUI ();
 			break;
 		}
@@ -105,7 +103,8 @@ public class LightmappingAdvancedWindow : EditorWindow
 
 	void FrameSettingsGUI ()
 	{
-		GUILayout.Label ("CPU", EditorStyles.boldLabel);
+		// Threads
+		GUILayout.Label ("Threads", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		Toggle ("Auto Threads", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
 		EditorGUI.indentLevel++;
@@ -126,13 +125,13 @@ public class LightmappingAdvancedWindow : EditorWindow
 //		IntField ("Tile Size", ref config.frameSettings.tileSize, "A smaller tile gives better ray tracing coherence. There is no 'best setting' for all scenes. Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.");
 //		EditorGUI.indentLevel--;
 
-		EditorGUILayout.Space ();
-
+		// Premultiplication
+		GUILayout.Label ("Premultiplication", EditorStyles.boldLabel);
 		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+		EditorGUI.indentLevel++;
 		if (!config.frameSettings.premultiply) {
 			GUI.enabled = false;
 		}
-		EditorGUI.indentLevel++;
 		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
 		EditorGUI.indentLevel--;
 		GUI.enabled = true;
@@ -220,6 +219,17 @@ public class LightmappingAdvancedWindow : EditorWindow
 	void IntegratorSettings (int index, bool isPrimary)
 	{
 		EditorGUI.indentLevel++;
+
+		if (index != 0) {
+			if (isPrimary) {
+				FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+				FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+			} else {
+				FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+				FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+			}
+		}
+
 		switch (index) {
 		case 0:
 			if (isPrimary && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.None)
@@ -279,14 +289,6 @@ public class LightmappingAdvancedWindow : EditorWindow
 		EditorGUI.indentLevel++;
 		IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10, "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used.");
 		FloatField ("Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
-		if (isPrimaryIntegrator) {
-			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-		}
-		else {
-			FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-			FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-		}
 		EditorGUI.indentLevel--;
 
 		EditorGUILayout.Space ();
@@ -319,13 +321,6 @@ public class LightmappingAdvancedWindow : EditorWindow
 		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
-		if (isPrimaryIntegrator) {
-			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-		} else {
-			FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-			FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-		}
 		EditorGUI.indentLevel--;
 		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
 		FloatField ("Point Size", ref config.giSettings.ptPointSize, "Sets the maximum distance between the points in the path tracer cache. If set to 0 a value will be calculated automatically based on the size of the scene. The automatic value will be printed out during rendering, which is a good starting value if the point spacing needs to be adjusted.");
@@ -353,28 +348,24 @@ public class LightmappingAdvancedWindow : EditorWindow
 		IntField ("Rays", ref config.giSettings.mcRays, "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time.");
 		FloatField ("Ray Length", ref config.giSettings.mcMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
 		IntSlider ("Bounces", ref config.giSettings.mcDepth, 1, 10, "Sets the number of indirect light bounces calculated by monte carlo.");
-		if (isPrimaryIntegrator) {
-			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-		} else {
-			FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-			FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
-		}
 	}
 	
 	void EnvironmentGUI ()
 	{
-		FloatField ("Intensity", ref config.environmentSettings.giEnvironmentIntensity, "");
 		config.environmentSettings.giEnvironment = (ILConfig.EnvironmentSettings.Environment)EditorGUILayout.EnumPopup ("Environment Type", config.environmentSettings.giEnvironment);
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None) {
 			GUI.enabled = false;
 		} else {
 			GUI.enabled = true;
 		}
+
+		EditorGUI.indentLevel++;
+
+		FloatField ("Intensity", ref config.environmentSettings.giEnvironmentIntensity, "");
+
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
 			
 		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
-			EditorGUI.indentLevel++;
 
 			EditorGUILayout.LabelField ("HDR Image", Path.GetFileName (config.environmentSettings.iblImageFile));
 			if (GUILayout.Button ("Choose Image")) {
@@ -408,9 +399,8 @@ public class LightmappingAdvancedWindow : EditorWindow
 
 			IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
 			FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
-
-			EditorGUI.indentLevel--;
 		}
+		EditorGUI.indentLevel--;
 		
 		GUI.enabled = true;
 	}
