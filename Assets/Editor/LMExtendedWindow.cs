@@ -4,21 +4,23 @@ using System.Collections;
 using System.IO;
 
 
-public class LightmappingAdvancedWindow : EditorWindow
+public class LMExtendedWindow : EditorWindow
 {
-	private static LightmappingAdvancedWindow window;
+	private static LMExtendedWindow window;
 	
 	private ILConfig config;
-	
-	
-	[MenuItem ("Window/Lightmapping Advanced")]
+
+	[MenuItem ("Window/Lightmapping Extended")]
 	static void Init ()
 	{
-		LightmappingAdvancedWindow window = (LightmappingAdvancedWindow)EditorWindow.GetWindow (typeof(LightmappingAdvancedWindow), false, "LM Advanced");
+		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Advanced");
+		window.autoRepaintOnSceneChange = true;
 	}
 	
 	public string ConfigFilePath {
 		get {
+			if (string.IsNullOrEmpty (EditorApplication.currentScene))
+				return null;
 			string root = Path.GetDirectoryName (EditorApplication.currentScene);
 			string dir = Path.GetFileNameWithoutExtension (EditorApplication.currentScene);
 			string path = Path.Combine (root, dir);
@@ -37,6 +39,11 @@ public class LightmappingAdvancedWindow : EditorWindow
 	void OnGUI ()
 	{
 		string path = ConfigFilePath;
+		if (path == null) {
+			GUILayout.Label ("Open a scene file to edit lightmap settings");
+			return;
+		}
+
 		if (File.Exists (path)) {
 			config = ILConfig.Load (path);
 		} else {
@@ -94,6 +101,11 @@ public class LightmappingAdvancedWindow : EditorWindow
 //		GUILayout.EndHorizontal ();
 
 		EditorGUILayout.EndScrollView ();
+	}
+
+	void OnSelectionChange ()
+	{
+		window.Repaint ();
 	}
 	
 
