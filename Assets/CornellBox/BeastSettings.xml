@@ -7,22 +7,22 @@
     <diagnose>false</diagnose>
     <clamp>false</clamp>
     <samplingMode>Adaptive</samplingMode>
-    <filter>Gauss</filter>
+    <filter>Box</filter>
     <filterSize>
-      <x>2.2</x>
-      <y>2.2</y>
+      <x>1</x>
+      <y>1</y>
     </filterSize>
   </AASettings>
   <RenderSettings>
-    <bias>0</bias>
+    <bias>0.005</bias>
     <giTransparencyDepth>2</giTransparencyDepth>
     <ignoreLightLinks>false</ignoreLightLinks>
     <maxRayDepth>6</maxRayDepth>
-    <maxShadowRays>10000</maxShadowRays>
+    <maxShadowRays>-1</maxShadowRays>
     <minShadowRays>0</minShadowRays>
     <reflectionDepth>2</reflectionDepth>
     <reflectionThreshold>0.001</reflectionThreshold>
-    <shadowDepth>1</shadowDepth>
+    <shadowDepth>2</shadowDepth>
     <shadowsIgnoreLightLinks>false</shadowsIgnoreLightLinks>
     <transparencyDepth>50</transparencyDepth>
     <tsIntersectionNormalization>true</tsIntersectionNormalization>
@@ -33,7 +33,7 @@
     <vertexMergeThreshold>0.001</vertexMergeThreshold>
   </RenderSettings>
   <EnvironmentSettings>
-    <giEnvironment>IBL</giEnvironment>
+    <giEnvironment>None</giEnvironment>
     <skyLightColor>
       <r>0.86</r>
       <g>0.93</g>
@@ -45,7 +45,7 @@
     <iblEmitDiffuse>true</iblEmitDiffuse>
     <iblEmitLight>false</iblEmitLight>
     <iblEmitSpecular>false</iblEmitSpecular>
-    <iblGIEnvBlur>0.06</iblGIEnvBlur>
+    <iblGIEnvBlur>0.05</iblGIEnvBlur>
     <iblIntensity>1</iblIntensity>
     <iblSamples>300</iblSamples>
     <iblShadows>true</iblShadows>
@@ -59,10 +59,22 @@
     <renderThreads>2</renderThreads>
     <dither>true</dither>
     <inputGamma>1</inputGamma>
-    <tileScheme>Hilbert</tileScheme>
-    <tileSize>32</tileSize>
+    <outputCorrection>
+      <colorCorrection>None</colorCorrection>
+      <gamma>1</gamma>
+    </outputCorrection>
     <premultiply>true</premultiply>
     <premultiplyThreshold>0</premultiplyThreshold>
+    <outputVerbosity>
+      <errorPrint>true</errorPrint>
+      <warningPrint>true</warningPrint>
+      <benchmarkPrint>false</benchmarkPrint>
+      <progressPrint>true</progressPrint>
+      <infoPrint>false</infoPrint>
+      <verbosePrint>false</verbosePrint>
+      <debugPrint>false</debugPrint>
+      <debugFile>false</debugFile>
+    </outputVerbosity>
   </FrameSettings>
   <GISettings>
     <clampMaterials>None</clampMaterials>
@@ -73,7 +85,7 @@
     <ignoreNonDiffuse>true</ignoreNonDiffuse>
     <prepassMaxSampleRate>0</prepassMaxSampleRate>
     <prepassMinSampleRate>-4</prepassMinSampleRate>
-    <primaryIntegrator>FinalGather</primaryIntegrator>
+    <primaryIntegrator>MonteCarlo</primaryIntegrator>
     <primaryIntensity>1</primaryIntensity>
     <primarySaturation>1</primarySaturation>
     <secondaryIntegrator>None</secondaryIntegrator>
@@ -82,28 +94,28 @@
     <specularScale>1</specularScale>
     <fgAOContrast>1</fgAOContrast>
     <fgAOInfluence>0</fgAOInfluence>
-    <fgAOMaxDistance>0.223798</fgAOMaxDistance>
-    <fgAOScale>2.0525</fgAOScale>
+    <fgAOMaxDistance>0</fgAOMaxDistance>
+    <fgAOScale>1</fgAOScale>
     <fgAOVisualize>false</fgAOVisualize>
     <fgAttenuationStart>0</fgAttenuationStart>
     <fgAttenuationStop>0</fgAttenuationStop>
     <fgCacheDirectLight>false</fgCacheDirectLight>
-    <fgCheckVisibility>true</fgCheckVisibility>
+    <fgCheckVisibility>false</fgCheckVisibility>
     <fgCheckVisibilityDepth>1</fgCheckVisibilityDepth>
     <fgClampRadiance>false</fgClampRadiance>
-    <fgContrastThreshold>0.05</fgContrastThreshold>
+    <fgContrastThreshold>0.1</fgContrastThreshold>
     <fgDepth>1</fgDepth>
     <fgEstimatePoints>15</fgEstimatePoints>
     <fgExploitFrameCoherence>false</fgExploitFrameCoherence>
     <fgFalloffExponent>0</fgFalloffExponent>
-    <fgGradientThreshold>0</fgGradientThreshold>
+    <fgGradientThreshold>0.5</fgGradientThreshold>
     <fgInterpolationPoints>15</fgInterpolationPoints>
     <fgLightLeakRadius>0</fgLightLeakRadius>
     <fgLightLeakReduction>false</fgLightLeakReduction>
     <fgMaxRayLength>0</fgMaxRayLength>
     <fgNormalThreshold>0.2</fgNormalThreshold>
-    <fgPreview>false</fgPreview>
-    <fgRays>1000</fgRays>
+    <fgPreview>true</fgPreview>
+    <fgRays>300</fgRays>
     <fgUseCache>Irradiance</fgUseCache>
     <ptAccuracy>1</ptAccuracy>
     <ptCacheDirectLight>true</ptCacheDirectLight>

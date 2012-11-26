@@ -57,19 +57,19 @@ public class ILConfig
 	#endregion
 	
 	[XmlElement(ElementName = "AASettings")]
-	public AASettings aaSettings;
+	public AASettings aaSettings = new AASettings ();
 	[XmlElement(ElementName = "RenderSettings")]
-	public RenderSettings renderSettings;
+	public RenderSettings renderSettings = new RenderSettings ();
 	[XmlElement(ElementName = "EnvironmentSettings")]
-	public EnvironmentSettings environmentSettings;
+	public EnvironmentSettings environmentSettings = new EnvironmentSettings ();
 	[XmlElement(ElementName = "FrameSettings")]
-	public FrameSettings frameSettings;
+	public FrameSettings frameSettings = new FrameSettings ();
 	[XmlElement(ElementName = "GISettings")]
-	public GISettings giSettings;
+	public GISettings giSettings = new GISettings ();
 	[XmlElement(ElementName = "SurfaceTransferSettings")]
-	public SurfaceTransferSettings surfaceTransferSettings;
+	public SurfaceTransferSettings surfaceTransferSettings = new SurfaceTransferSettings ();
 	[XmlElement(ElementName = "TextureBakeSettings")]
-	public TextureBakeSettings textureBakeSettings;
+	public TextureBakeSettings textureBakeSettings = new TextureBakeSettings ();
 	
 	
 	public static ILConfig Load (string path)
@@ -107,25 +107,25 @@ public class ILConfig
 		/// <summary>
 		/// Different ways for Beast to distribute tiles over the image plane.
 		/// </summary>
-		public enum TileScheme
-		{
-			/// <summary>
-			/// Render from left to right.
-			/// </summary>
-			LeftToRight,
-			/// <summary>
-			/// A way for Beast to achieve maximum coherence, e.g., the fastest rendering time possible.
-			/// </summary>
-			Hilbert,
-			/// <summary>
-			/// A good way to get an early feel for the whole picture without rendering everything.
-			/// </summary>
-			Random,
-			/// <summary>
-			/// Starts in the middle and renders outward in a spiral.
-			/// </summary>
-			Concentric
-		}
+//		public enum TileScheme
+//		{
+//			/// <summary>
+//			/// Render from left to right.
+//			/// </summary>
+//			LeftToRight,
+//			/// <summary>
+//			/// A way for Beast to achieve maximum coherence, e.g., the fastest rendering time possible.
+//			/// </summary>
+//			Hilbert,
+//			/// <summary>
+//			/// A good way to get an early feel for the whole picture without rendering everything.
+//			/// </summary>
+//			Random,
+//			/// <summary>
+//			/// Starts in the middle and renders outward in a spiral.
+//			/// </summary>
+//			Concentric
+//		}
 		
 		public enum ColorCorrection
 		{
@@ -190,16 +190,16 @@ public class ILConfig
 		/// which is the gamma the Beast API assumes is used.
 		/// </summary>
 		public float inputGamma = 1.0f;
-		public OutputCorrection outputCorrection;
+		public OutputCorrection outputCorrection = new OutputCorrection ();
 		/// <summary>
 		/// Different ways for Beast to distribute tiles over the image plane.
 		/// </summary>
-		public TileScheme tileScheme = TileScheme.Hilbert;
+//		public TileScheme tileScheme = TileScheme.Hilbert;
 		/// <summary>
 		/// A smaller tile gives better ray tracing coherence. There is no “best setting” for all scenes.
 		/// Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.
 		/// </summary>
-		public int tileSize = 32;
+//		public int tileSize = 32;
 		/// <summary>
 		/// If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel.
 		/// Note that disabling premultiply alpha gives poor result if used with environment maps and other
@@ -215,7 +215,7 @@ public class ILConfig
 		/// <summary>
 		/// Different levels of textual output that Beast can produce.
 		/// </summary>
-		public OutputVerbosity outputVerbosity;
+		public OutputVerbosity outputVerbosity = new OutputVerbosity ();
 	}
 	
 	
