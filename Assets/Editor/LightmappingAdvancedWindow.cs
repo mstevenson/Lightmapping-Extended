@@ -53,7 +53,7 @@ public class LightmappingAdvancedWindow : EditorWindow
 		if (config == null)
 			return;
 
-		selected = GUILayout.SelectionGrid (selected, new string[] {"Settings", "Global Illumination", "Environment"}, 2);
+		selected = GUILayout.SelectionGrid (selected, new string[] {"Settings", "Global Illum", "Environment"}, 3);
 		EditorGUILayout.Space ();
 
 		scroll = EditorGUILayout.BeginScrollView (scroll);
