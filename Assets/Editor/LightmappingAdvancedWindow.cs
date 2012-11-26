@@ -279,9 +279,14 @@ public class LightmappingAdvancedWindow : EditorWindow
 		EditorGUI.indentLevel++;
 		IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10, "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used.");
 		FloatField ("Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
-		FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-		LightmapEditorSettings.bounceIntensity = config.giSettings.primaryIntensity;
-		FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		if (isPrimaryIntegrator) {
+			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		}
+		else {
+			FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+			FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		}
 		EditorGUI.indentLevel--;
 
 		EditorGUILayout.Space ();
@@ -314,8 +319,13 @@ public class LightmappingAdvancedWindow : EditorWindow
 		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
-		FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-		FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		if (isPrimaryIntegrator) {
+			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		} else {
+			FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+			FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		}
 		EditorGUI.indentLevel--;
 		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
 		FloatField ("Point Size", ref config.giSettings.ptPointSize, "Sets the maximum distance between the points in the path tracer cache. If set to 0 a value will be calculated automatically based on the size of the scene. The automatic value will be printed out during rendering, which is a good starting value if the point spacing needs to be adjusted.");
@@ -343,6 +353,13 @@ public class LightmappingAdvancedWindow : EditorWindow
 		IntField ("Rays", ref config.giSettings.mcRays, "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time.");
 		FloatField ("Ray Length", ref config.giSettings.mcMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
 		IntSlider ("Bounces", ref config.giSettings.mcDepth, 1, 10, "Sets the number of indirect light bounces calculated by monte carlo.");
+		if (isPrimaryIntegrator) {
+			FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+			FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		} else {
+			FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
+			FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+		}
 	}
 	
 	void EnvironmentGUI ()

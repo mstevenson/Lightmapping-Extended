@@ -85,7 +85,7 @@
     <ignoreNonDiffuse>true</ignoreNonDiffuse>
     <prepassMaxSampleRate>0</prepassMaxSampleRate>
     <prepassMinSampleRate>-4</prepassMinSampleRate>
-    <primaryIntegrator>MonteCarlo</primaryIntegrator>
+    <primaryIntegrator>PathTracer</primaryIntegrator>
     <primaryIntensity>1</primaryIntensity>
     <primarySaturation>1</primarySaturation>
     <secondaryIntegrator>None</secondaryIntegrator>
@@ -138,9 +138,9 @@
     <ptPreview>true</ptPreview>
     <ptSpecularIllum>true</ptSpecularIllum>
     <ptTransmissiveIllum>true</ptTransmissiveIllum>
-    <mcDepth>2</mcDepth>
+    <mcDepth>6</mcDepth>
     <mcMaxRayLength>0</mcMaxRayLength>
-    <mcRays>16</mcRays>
+    <mcRays>20</mcRays>
   </GISettings>
   <SurfaceTransferSettings>
     <frontRange>0</frontRange>
