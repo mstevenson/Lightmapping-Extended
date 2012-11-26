@@ -6,7 +6,7 @@ using System.IO;
 
 public class LMExtendedWindow : EditorWindow
 {
-	private static LMExtendedWindow window;
+	static LMExtendedWindow window;
 	
 	private ILConfig config;
 
@@ -60,7 +60,7 @@ public class LMExtendedWindow : EditorWindow
 		if (config == null)
 			return;
 
-		selected = GUILayout.SelectionGrid (selected, new string[] {"Settings", "Global Illum", "Environment"}, 3);
+		selected = GUILayout.Toolbar (selected, new string[] {"Settings", "Global Illum", "Environment"});
 		EditorGUILayout.Space ();
 
 		scroll = EditorGUILayout.BeginScrollView (scroll);
@@ -105,7 +105,14 @@ public class LMExtendedWindow : EditorWindow
 
 	void OnSelectionChange ()
 	{
-		window.Repaint ();
+		if (window)
+			window.Repaint ();
+	}
+
+	void OnProjectChange ()
+	{
+		if (window)
+			window.Repaint ();
 	}
 	
 
@@ -137,8 +144,6 @@ public class LMExtendedWindow : EditorWindow
 //		config.frameSettings.tileScheme = (ILConfig.FrameSettings.TileScheme)EditorGUILayout.EnumPopup (new GUIContent ("Tile Scheme", "Different ways for Beast to distribute tiles over the image plane."), config.frameSettings.tileScheme);
 //		IntField ("Tile Size", ref config.frameSettings.tileSize, "A smaller tile gives better ray tracing coherence. There is no 'best setting' for all scenes. Default value is 32, giving 32x32 pixel tiles. The largest allowed tile size is 128.");
 //		EditorGUI.indentLevel--;
-
-		EditorGUILayout.Space ();
 
 //		GUILayout.Label ("Output Verbosity");
 //		EditorGUI.indentLevel++;
@@ -186,22 +191,22 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.indentLevel--;
 	}
 
-	[SerializeField]
-	int primaryIntegratorSelection;
-	[SerializeField]
-	int secondaryIntegratorSelection;
-
 	void GlobalIlluminationGUI ()
 	{
+		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
+		Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
+
+		EditorGUILayout.Space ();
+
 		GUILayout.Label ("Primary Integrator", EditorStyles.boldLabel);
-		primaryIntegratorSelection = IntegratorPopup (primaryIntegratorSelection);
-		IntegratorSettings (primaryIntegratorSelection, true);
+		IntegratorPopup (true);
+		IntegratorSettings (config.giSettings.primaryIntegrator, true);
 
 		EditorGUILayout.Space ();
 
 		GUILayout.Label ("Secondary Integrator", EditorStyles.boldLabel);
-		secondaryIntegratorSelection = IntegratorPopup (secondaryIntegratorSelection);
-		IntegratorSettings (secondaryIntegratorSelection, false);
+		IntegratorPopup (false);
+		IntegratorSettings (config.giSettings.secondaryIntegrator, false);
 
 		if (config.giSettings.primaryIntegrator == ILConfig.GISettings.Integrator.FinalGather && config.giSettings.secondaryIntegrator == ILConfig.GISettings.Integrator.PathTracer) {
 			EditorGUILayout.Space ();
@@ -213,16 +218,27 @@ public class LMExtendedWindow : EditorWindow
 		}
 	}
 
-	int IntegratorPopup (int selection)
+	void IntegratorPopup (bool isPrimary)
 	{
-		return EditorGUILayout.Popup (selection, new string[] { "None", "Final Gather", "Path Tracer", "Monte Carlo" });
+//		int index = -1;
+//		string[] names = new string[] { "None", "Final Gather", "Path Tracer", "Monte Carlo" };
+		if (isPrimary) {
+//			index = EditorGUILayout.Popup ((int)config.giSettings.primaryIntegrator, names);
+//			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)System.Enum.Parse (typeof(ILConfig.GISettings.Integrator), index.ToString ());
+			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.primaryIntegrator);
+		}
+		else {
+			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.secondaryIntegrator);
+//			index = EditorGUILayout.Popup ((int)config.giSettings.secondaryIntegrator, names);
+//			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)System.Enum.Parse (typeof(ILConfig.GISettings.Integrator), index.ToString ());
+		}
 	}
 
-	void IntegratorSettings (int index, bool isPrimary)
+	void IntegratorSettings (ILConfig.GISettings.Integrator integrator, bool isPrimary)
 	{
 		EditorGUI.indentLevel++;
 
-		if (index != 0) {
+		if (integrator != ILConfig.GISettings.Integrator.None) {
 			if (isPrimary) {
 				FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
 				FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
@@ -232,20 +248,20 @@ public class LMExtendedWindow : EditorWindow
 			}
 		}
 
-		switch (index) {
-		case 0:
+		switch (integrator) {
+		case ILConfig.GISettings.Integrator.None:
 			if (isPrimary && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.None)
 				config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.None;
 			else if (!isPrimary && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.None)
 				config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
 			break;
-		case 1:
+		case ILConfig.GISettings.Integrator.FinalGather:
 			FinalGatherSettings (isPrimary);
 			break;
-		case 2:
+		case ILConfig.GISettings.Integrator.PathTracer:
 			PathTracerSettings (isPrimary);
 			break;
-		case 3:
+		case ILConfig.GISettings.Integrator.MonteCarlo:
 			MonteCarloSettings (isPrimary);
 			break;
 		}
@@ -259,7 +275,15 @@ public class LMExtendedWindow : EditorWindow
 			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
-		
+
+		// Bounces
+
+		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
+		IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10, "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used.");
+		FloatField ("Bounce Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
+		EditorGUI.indentLevel--;
+
 		// Rays
 
 		GUILayout.Label ("Rays", EditorStyles.boldLabel);
@@ -273,14 +297,6 @@ public class LMExtendedWindow : EditorWindow
 		FloatField ("Falloff Exponent", ref config.giSettings.fgFalloffExponent, "This can be used to adjust the rate by which lighting falls off by distance. A higher exponent gives a faster falloff. Note that fgAttenuationStop must be set higher than 0.0 to enable attenuation.");
 		GUI.enabled = true;
 		EditorGUI.indentLevel--;
-		EditorGUI.indentLevel--;
-
-		// Bounces
-
-		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
-		EditorGUI.indentLevel++;
-		IntSlider ("Bounces", ref config.giSettings.fgDepth, 1, 10, "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used.");
-		FloatField ("Bounce Boost", ref config.giSettings.diffuseBoost, "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost)).");
 		EditorGUI.indentLevel--;
 
 		// Points
@@ -325,20 +341,18 @@ public class LMExtendedWindow : EditorWindow
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 
-		Slider ("Accuracy", ref config.giSettings.ptAccuracy, 0, 4, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
+		Slider ("Accuracy", ref config.giSettings.ptAccuracy, 0, 4, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
 		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
 
 		// Points
 
 		GUILayout.Label ("Points", EditorStyles.boldLabel);
-		EditorGUI.indentLevel++;
 		FloatField ("Point Size", ref config.giSettings.ptPointSize, "Sets the maximum distance between the points in the path tracer cache. If set to 0 a value will be calculated automatically based on the size of the scene. The automatic value will be printed out during rendering, which is a good starting value if the point spacing needs to be adjusted.");
 		FloatField ("Normal Threshold", ref config.giSettings.ptNormalThreshold, "Sets the amount of normal deviation that is allowed during cache point filtering.");
 		config.giSettings.ptFilterType = (ILConfig.GISettings.PTFilterType)EditorGUILayout.EnumPopup (new GUIContent ("Filter Type", "Selects the filter to use when querying the cache during rendering. None will return the closest cache point (unfiltered)."), config.giSettings.ptFilterType);
 		FloatField ("Filter Size", ref config.giSettings.ptFilterSize, "Sets the size of the filter as a multiplier of the Cache Point Spacing value. For example; a value of 3.0 will use a filter that is three times larges then the cache point spacing. If this value is below 1.0 there is no guarantee that any cache point is found. If no cache point is found the Default Color will be returned instead for that query.");
 		Toggle ("Check Visibility", ref config.giSettings.ptCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
-		EditorGUI.indentLevel--;
 
 		// Performance
 
@@ -355,9 +369,9 @@ public class LMExtendedWindow : EditorWindow
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
 
+		IntSlider ("Bounces", ref config.giSettings.mcDepth, 1, 20, "Sets the number of indirect light bounces calculated by monte carlo.");
 		IntField ("Rays", ref config.giSettings.mcRays, "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time.");
 		FloatField ("Ray Length", ref config.giSettings.mcMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
-		IntSlider ("Bounces", ref config.giSettings.mcDepth, 1, 20, "Sets the number of indirect light bounces calculated by monte carlo.");
 	}
 	
 	void EnvironmentGUI ()
@@ -423,9 +437,6 @@ public class LMExtendedWindow : EditorWindow
 
 		LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "Counteract unwanted light seams for tightly packed UV patches.");
 		IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
-
-		// Premultiplication
-		GUILayout.Label ("Premultiplication", EditorStyles.boldLabel);
 		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
 		EditorGUI.indentLevel++;
 		if (!config.frameSettings.premultiply) {

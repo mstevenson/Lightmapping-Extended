@@ -407,7 +407,7 @@ public class ILConfig
 		/// <summary>
 		/// The type of Environment: None, Skylight or IBL.
 		/// </summary>
-		public Environment giEnvironment = Environment.SkyLight;
+		public Environment giEnvironment = Environment.None;
 		/// <summary>
 		/// A constant environment color. In Unity: "Sky Light Color"
 		/// </summary>
@@ -506,14 +506,14 @@ public class ILConfig
 		}
 		
 		public enum Integrator {
-			None,
-			FinalGather,
+			None = 0,
+			FinalGather = 1,
 			/// <summary>
 			/// Used if many indirect bounces are needed and Final Gather-only solution with acceptable
 			/// quality would take to much time to render.
 			/// </summary>
-			PathTracer,
-			MonteCarlo
+			PathTracer = 2,
+			MonteCarlo = 3
 		}
 		
 		
@@ -569,7 +569,7 @@ public class ILConfig
 		/// global illumination render. Both subsystems have individual control of Intensity and Saturation
 		/// to boost the effects if necessary.
 		/// </summary>
-		public Integrator primaryIntegrator = Integrator.FinalGather;
+		public Integrator primaryIntegrator = Integrator.None;
 		/// <summary>
 		/// Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost
 		/// or reduce the amount of indirect light easily.
@@ -587,7 +587,7 @@ public class ILConfig
 		/// global illumination render. Both subsystems have individual control of Intensity and Saturation
 		/// to boost the effects if necessary.
 		/// </summary>
-		public Integrator secondaryIntegrator = Integrator.PathTracer;
+		public Integrator secondaryIntegrator = Integrator.None;
 		/// <summary>
 		/// Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost
 		/// or reduce the perceived saturation of the bounced light.
