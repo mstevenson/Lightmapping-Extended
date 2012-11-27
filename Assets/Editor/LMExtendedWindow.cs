@@ -44,9 +44,19 @@ public class LMExtendedWindow : EditorWindow
 			return;
 		}
 
-		if (File.Exists (path)) {
-			config = ILConfig.Load (path);
+		// Determine if config file exists
+		bool haveConfigFile = false;
+		if (config == null) {
+			if (File.Exists (path)) {
+				config = ILConfig.Load (path);
+				haveConfigFile = true;
+			}
 		} else {
+			haveConfigFile = true;
+		}
+
+		// Option to generate a config file
+		if (!haveConfigFile) {
 			if (GUILayout.Button ("Generate Beast settings file for current scene")) {
 				ILConfig newConfig = new ILConfig ();
 				newConfig.Save (ConfigFilePath);
@@ -56,9 +66,6 @@ public class LMExtendedWindow : EditorWindow
 			GUIUtility.ExitGUI ();
 			return;
 		}
-
-		if (config == null)
-			return;
 
 		selected = GUILayout.Toolbar (selected, new string[] {"Settings", "Global Illum", "Environment"});
 		EditorGUILayout.Space ();
@@ -373,7 +380,7 @@ public class LMExtendedWindow : EditorWindow
 		IntField ("Rays", ref config.giSettings.mcRays, "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time.");
 		FloatField ("Ray Length", ref config.giSettings.mcMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
 	}
-	
+
 	void EnvironmentGUI ()
 	{
 		config.environmentSettings.giEnvironment = (ILConfig.EnvironmentSettings.Environment)EditorGUILayout.EnumPopup ("Environment Type", config.environmentSettings.giEnvironment);
@@ -390,12 +397,26 @@ public class LMExtendedWindow : EditorWindow
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
 			LMColorPicker ("Sky Light Color", ref config.environmentSettings.skyLightColor, "It is often a good idea to keep the color below 1.0 in intensity to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.");
 		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
-
-			EditorGUILayout.LabelField ("HDR Image", Path.GetFileName (config.environmentSettings.iblImageFile));
-			if (GUILayout.Button ("Choose Image")) {
-				config.environmentSettings.iblImageFile = EditorUtility.OpenFilePanel ("Select EXR or HDR file", "", "");
-				GUIUtility.ExitGUI ();
+			EditorGUILayout.PrefixLabel (new GUIContent ("IBL Image", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
+			GUILayout.BeginHorizontal ();
+			{
+				GUILayout.Space (22);
+				config.environmentSettings.iblImageFile = EditorGUILayout.TextField (config.environmentSettings.iblImageFile);
+				if (GUILayout.Button ("Choose", GUILayout.Width (54))) {
+					string file = EditorUtility.OpenFilePanel ("Select EXR or HDR file", "", "");
+					string ext = Path.GetExtension (file);
+					if (!string.IsNullOrEmpty (file)) {
+						if (ext == ".exr" || ext == ".hdr") {
+							config.environmentSettings.iblImageFile = file;
+							GUI.changed = true;
+							Repaint ();
+						} else {
+							Debug.LogError ("IBL image files must use the extension .exr or .hdr");
+						}
+					}
+				}
 			}
+			GUILayout.EndHorizontal ();
 			Slider ("Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
 			FloatField ("Blur", ref config.environmentSettings.iblGIEnvBlur, "Pre-blur the environment image for Global Illumination calculations. Can help to reduce noise and flicker in images rendered with Final Gather. May increase render time as it is blurred at render time. It is always cheaper to pre-blur the image itself in an external application before loading it into Beast.");
 

@@ -430,7 +430,7 @@ public class ILConfig
 		/// Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost
 		/// the intensity of the image.
 		/// </remarks>
-		public string iblImageFile;
+		public string iblImageFile = "";
 		/// <summary>
 		/// Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows
 		/// flicker more in animations.
