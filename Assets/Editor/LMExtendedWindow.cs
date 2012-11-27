@@ -112,14 +112,23 @@ public class LMExtendedWindow : EditorWindow
 
 	void OnSelectionChange ()
 	{
-		if (window)
-			window.Repaint ();
+		if (!File.Exists (ConfigFilePath))
+			config = null;
+		Repaint ();
+	}
+
+	void OnFocus ()
+	{
+		if (!File.Exists (ConfigFilePath))
+			config = null;
+		Repaint ();
 	}
 
 	void OnProjectChange ()
 	{
-		if (window)
-			window.Repaint ();
+		if (!File.Exists (ConfigFilePath))
+			config = null;
+		Repaint ();
 	}
 	
 
