@@ -422,7 +422,7 @@ public class ILConfig
 		/// <remarks>
 		/// Used for avoiding gamma correction errors and to scale HDR textures to something that fits your scene.
 		/// </remarks>
-		public float giEnvironmentIntensity = 0;
+		public float giEnvironmentIntensity = 0.2f;
 		/// <summary>
 		/// The image file to use for IBL, using an absolute path.
 		/// </summary>

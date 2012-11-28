@@ -96,6 +96,7 @@ public class LMExtendedWindow : EditorWindow
 		
 		EditorGUILayout.EndScrollView ();
 		
+		EditorGUILayout.Space ();
 		GUILayout.BeginHorizontal ();
 		{
 			GUILayout.FlexibleSpace ();
@@ -465,7 +466,7 @@ public class LMExtendedWindow : EditorWindow
 			}
 			GUILayout.EndHorizontal ();
 			Toggle ("Swap Y/Z", ref config.environmentSettings.iblSwapYZ, "Swap the Up Axis. Default value is false, meaning that Y is up.");
-			Slider ("Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
+			Slider ("Dome Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
 			FloatField ("Blur", ref config.environmentSettings.iblGIEnvBlur, "Pre-blur the environment image for Global Illumination calculations. Can help to reduce noise and flicker in images rendered with Final Gather. May increase render time as it is blurred at render time. It is always cheaper to pre-blur the image itself in an external application before loading it into Beast.");
 
 			GUILayout.Label ("IBL Light", EditorStyles.boldLabel);
