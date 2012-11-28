@@ -13,14 +13,14 @@ public class LMExtendedWindow : EditorWindow
 	[MenuItem ("Window/Lightmapping Extended")]
 	static void Init ()
 	{
-		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Advanced");
+		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
 	}
 	
 	public string ConfigFilePath {
 		get {
 			if (string.IsNullOrEmpty (EditorApplication.currentScene))
-				return null;
+				return "";
 			string root = Path.GetDirectoryName (EditorApplication.currentScene);
 			string dir = Path.GetFileNameWithoutExtension (EditorApplication.currentScene);
 			string path = Path.Combine (root, dir);
@@ -28,7 +28,6 @@ public class LMExtendedWindow : EditorWindow
 			return path;
 		}
 	}
-	
 	
 	
 	private int selected;
@@ -39,7 +38,7 @@ public class LMExtendedWindow : EditorWindow
 	void OnGUI ()
 	{
 		string path = ConfigFilePath;
-		if (path == null) {
+		if (string.IsNullOrEmpty (path)) {
 			GUILayout.Label ("Open a scene file to edit lightmap settings");
 			return;
 		}
@@ -57,13 +56,17 @@ public class LMExtendedWindow : EditorWindow
 
 		// Option to generate a config file
 		if (!haveConfigFile) {
+			EditorGUILayout.Space ();
 			if (GUILayout.Button ("Generate Beast settings file for current scene")) {
 				ILConfig newConfig = new ILConfig ();
+				var dir = Path.GetDirectoryName (ConfigFilePath);
+				if (!Directory.Exists (dir))
+					Directory.CreateDirectory (dir);
 				newConfig.Save (ConfigFilePath);
 				config = ILConfig.Load (path);
 				AssetDatabase.Refresh ();
+				GUIUtility.ExitGUI ();
 			}
-			GUIUtility.ExitGUI ();
 			return;
 		}
 
@@ -76,6 +79,7 @@ public class LMExtendedWindow : EditorWindow
 		case 0:
 			PerformanceSettingsGUI ();
 			TextureBakeGUI ();
+			AASettingsGUI ();
 			RenderSettingsGUI ();
 			break;
 		case 1:
@@ -90,24 +94,26 @@ public class LMExtendedWindow : EditorWindow
 			config.Save (ConfigFilePath);
 		}
 		
-//		GUILayout.BeginHorizontal ();
-//		{
-//			if (GUILayout.Button ("Clear")) {
-//				Lightmapping.Clear ();
-//			}
-//			if (Lightmapping.isRunning) {
-//				if (GUILayout.Button ("Cancel")) {
-//					Lightmapping.Cancel ();
-//				}
-//			} else {
-//				if (GUILayout.Button ("Bake")) {
-//					Lightmapping.Bake ();
-//				}
-//			}
-//		}
-//		GUILayout.EndHorizontal ();
-
 		EditorGUILayout.EndScrollView ();
+		
+		GUILayout.BeginHorizontal ();
+		{
+			GUILayout.FlexibleSpace ();
+			if (GUILayout.Button ("Clear", GUILayout.Width (120))) {
+				Lightmapping.Clear ();
+			}
+			if (Lightmapping.isRunning) {
+				if (GUILayout.Button ("Cancel", GUILayout.Width (120))) {
+					Lightmapping.Cancel ();
+				}
+			} else {
+				if (GUILayout.Button ("Bake Scene", GUILayout.Width (120))) {
+					Lightmapping.BakeAsync ();
+				}
+			}
+		}
+		GUILayout.EndHorizontal ();
+		EditorGUILayout.Space ();
 	}
 
 	void OnSelectionChange ()
@@ -173,7 +179,26 @@ public class LMExtendedWindow : EditorWindow
 //		Toggle ("Verbose Print", ref config.frameSettings.outputVerbosity.verbosePrint, "");
 //		EditorGUI.indentLevel--;
 	}
-
+	
+	void AASettingsGUI ()
+	{
+		GUILayout.Label ("Antialiasing", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
+		config.aaSettings.samplingMode = (ILConfig.AASettings.SamplingMode)EditorGUILayout.EnumPopup (new GUIContent ("Sampling Mode", ""), config.aaSettings.samplingMode);
+		EditorGUI.indentLevel++;
+		IntField ("Min Sample Rate", ref config.aaSettings.minSampleRate, "Controls the minimum number of samples per pixel. The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)");
+		IntField ("Max Sample Rate", ref config.aaSettings.maxSampleRate, "Controls the maximum number of samples per pixel. Values less than 0 allows using less than one sample per pixel (if AdaptiveSampling is used). The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)");
+		EditorGUI.indentLevel--;
+		FloatField ("Contrast", ref config.aaSettings.contrast, "If the contrast differs less than this threshold Beast will consider the sampling good enough. Default value is 0.1.");
+		config.aaSettings.filter = (ILConfig.AASettings.Filter)EditorGUILayout.EnumPopup (new GUIContent ("Filter", "The sub-pixel filter to use."), config.aaSettings.filter);
+		EditorGUILayout.PrefixLabel (new GUIContent ("Filter Size"));
+		EditorGUI.indentLevel++;
+		FloatField ("X", ref config.aaSettings.filterSize.x, "");
+		FloatField ("Y", ref config.aaSettings.filterSize.y, "");
+		EditorGUI.indentLevel--;
+		EditorGUI.indentLevel--;
+	}
+	
 	void RenderSettingsGUI ()
 	{
 		GUILayout.Label ("Rays", EditorStyles.boldLabel);
@@ -210,7 +235,9 @@ public class LMExtendedWindow : EditorWindow
 	void GlobalIlluminationGUI ()
 	{
 		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
-		Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
+		
+		// Caustics are not available in Unity 4
+		//Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
 
 		EditorGUILayout.Space ();
 
@@ -236,17 +263,11 @@ public class LMExtendedWindow : EditorWindow
 
 	void IntegratorPopup (bool isPrimary)
 	{
-//		int index = -1;
-//		string[] names = new string[] { "None", "Final Gather", "Path Tracer", "Monte Carlo" };
 		if (isPrimary) {
-//			index = EditorGUILayout.Popup ((int)config.giSettings.primaryIntegrator, names);
-//			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)System.Enum.Parse (typeof(ILConfig.GISettings.Integrator), index.ToString ());
 			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.primaryIntegrator);
 		}
 		else {
 			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.secondaryIntegrator);
-//			index = EditorGUILayout.Popup ((int)config.giSettings.secondaryIntegrator, names);
-//			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)System.Enum.Parse (typeof(ILConfig.GISettings.Integrator), index.ToString ());
 		}
 	}
 
@@ -358,7 +379,7 @@ public class LMExtendedWindow : EditorWindow
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
-		Slider ("Accuracy", ref config.giSettings.ptAccuracy, 0, 4, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
+		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
 		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
 
 		// Points
@@ -464,17 +485,22 @@ public class LMExtendedWindow : EditorWindow
 	{
 		GUILayout.Label ("Texture", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-
-		LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "Counteract unwanted light seams for tightly packed UV patches.");
-		IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
-		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
-		EditorGUI.indentLevel++;
-		if (!config.frameSettings.premultiply) {
-			GUI.enabled = false;
-		}
-		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
-		EditorGUI.indentLevel--;
-		GUI.enabled = true;
+		
+		// FIXME The following have no effect in Unity 4.0:
+		
+		//LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "");
+		//IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
+		//Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+		//EditorGUI.indentLevel++;
+		//if (!config.frameSettings.premultiply) {
+		//	GUI.enabled = false;
+		//}
+		//FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
+		//EditorGUI.indentLevel--;
+		//GUI.enabled = true;
+		
+		Toggle ("Bilinear Filter", ref config.textureBakeSettings.bilinearFilter, "Counteract unwanted light seams for tightly packed UV patches.");
+		Toggle ("Conservative Rasterization", ref config.textureBakeSettings.conservativeRasterization, "Find pixels which are only partially covered by the UV map.");
 
 		EditorGUI.indentLevel--;
 	}
@@ -507,11 +533,6 @@ public class LMExtendedWindow : EditorWindow
 		val = EditorGUILayout.IntField (new GUIContent (name, tooltip), val);
 	}
 
-//	private void LongToIntField (string name, ref long val, string tooltip)
-//	{
-//		val = (long)EditorGUILayout.IntField (new GUIContent (name, tooltip), (int)val);
-//	}
-
 	private void IntSlider (string name, ref int val, int min, int max, string tooltip)
 	{
 		val = EditorGUILayout.IntSlider (new GUIContent (name, tooltip), val, min, max);
@@ -519,7 +540,7 @@ public class LMExtendedWindow : EditorWindow
 
 	private void MinMaxField (string name, ref float min, ref float max, string tooltip) {
 		GUILayout.BeginHorizontal ();
-		GUILayout.Space (11 * EditorGUI.indentLevel);
+		GUILayout.Space (15 * EditorGUI.indentLevel);
 		GUILayout.Label (new GUIContent (name, tooltip));
 		min = EditorGUILayout.FloatField (min);
 		if (min < 0)
