@@ -1,3 +1,6 @@
+// Copyright (c) 2012 Michael Stevenson
+// Licensed under the MIT license
+
 using UnityEngine;
 using UnityEditor;
 using System.Collections;
