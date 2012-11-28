@@ -146,7 +146,7 @@ public class LMExtendedWindow : EditorWindow
 	void PerformanceSettingsGUI ()
 	{
 		// Threads
-		GUILayout.Label ("Threads", EditorStyles.boldLabel);
+		GUILayout.Label ("CPU", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		Toggle ("Auto Threads", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
 		EditorGUI.indentLevel++;
@@ -235,6 +235,8 @@ public class LMExtendedWindow : EditorWindow
 	void GlobalIlluminationGUI ()
 	{
 		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
+		if (!config.giSettings.enableGI)
+			GUI.enabled = false;
 		
 		// Caustics are not available in Unity 4
 		//Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
@@ -257,8 +259,11 @@ public class LMExtendedWindow : EditorWindow
 			if (!config.giSettings.fgLightLeakReduction)
 				GUI.enabled = false;
 			FloatField ("Light Leak Radius", ref config.giSettings.fgLightLeakRadius, "Controls how far away from walls the final gather will be called again, instead of the secondary GI. If 0.0 is used a value will be calculated by Beast depending on the secondary GI used. The calculated value is printed in the output window. If you still get leakage you can adjust this by manually typing in a higher value.");
-			GUI.enabled = true;
+			if (config.giSettings.enableGI)
+				GUI.enabled = true;
 		}
+		
+		GUI.enabled = true;
 	}
 
 	void IntegratorPopup (bool isPrimary)
@@ -332,7 +337,8 @@ public class LMExtendedWindow : EditorWindow
 		if (config.giSettings.fgAttenuationStop == 0)
 			GUI.enabled = false;
 		FloatField ("Falloff Exponent", ref config.giSettings.fgFalloffExponent, "This can be used to adjust the rate by which lighting falls off by distance. A higher exponent gives a faster falloff. Note that fgAttenuationStop must be set higher than 0.0 to enable attenuation.");
-		GUI.enabled = true;
+		if (config.giSettings.enableGI)
+			GUI.enabled = true;
 		EditorGUI.indentLevel--;
 		EditorGUI.indentLevel--;
 
@@ -340,11 +346,12 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Points", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 50, "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below.");
+		IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 40, "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below.");
+		IntSlider ("Estimate Points", ref config.giSettings.fgEstimatePoints, 1, 40, "Sets the minimum number of points that should be used when estimating final gather in the pre calculation pass. The impact is that a higher value will create more points all over the scene. The default value 15 rarely needs to be adjusted.");
+		Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
 		FloatField ("Contrast Threshold", ref config.giSettings.fgContrastThreshold, "Controls how sensitive the final gather should be for contrast differences between the points during pre calculation. If the contrast difference is above this threshold for neighbouring points, more points will be created in that area. This tells the algorithm to place points where they are really needed, e.g. at shadow boundaries or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high variance and hence a high contrast difference, so in that case you might need to increase the contrast threshold to prevent points from clumping together.");
 		FloatField ("Gradient Threshold", ref config.giSettings.fgGradientThreshold, "Controls how the irradiance gradient is used in the interpolation. Each point stores it's irradiance gradient which can be used to improve the interpolation. However in some situations using the gradient can result in white 'halos' and other artifacts. This threshold can be used to reduce those artifacts.");
 		FloatField ("Normal Threshold", ref config.giSettings.fgNormalThreshold, "Controls how sensitive the final gather should be for differences in the points normals. A lower value will give more points in areas of high curvature.");
-		Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
 		Toggle ("Clamp Radiance", ref config.giSettings.fgClampRadiance, "Turn this on to clamp the sampled values to [0, 1]. This will reduce high frequency noise when Final Gather is used together with other Global Illumination algorithms.");
 		EditorGUI.indentLevel--;
 		
@@ -352,7 +359,8 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Ambient Occlusion", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
+		// Not used by Unity
+//		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
 		Slider ("Influence", ref config.giSettings.fgAOInfluence, 0, 1, "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution.");
 		LightmapEditorSettings.aoAmount = config.giSettings.fgAOInfluence;
 		if (config.giSettings.fgAOInfluence <= 0)
@@ -362,12 +370,14 @@ public class LMExtendedWindow : EditorWindow
 		FloatField ("Max Distance", ref config.giSettings.fgAOMaxDistance, "Max distance for the occlusion. Beyond this distance a ray is considered to be visible. Can be used to avoid full occlusion for closed scenes.");
 		LightmapEditorSettings.aoMaxDistance = config.giSettings.fgAOMaxDistance;
 		FloatField ("Scale", ref config.giSettings.fgAOScale, "A scaling of the occlusion values. Can be used to increase or decrease the shadowing effect.");
-		GUI.enabled = true;
+		if (config.giSettings.enableGI)
+			GUI.enabled = true;
 
 		// Performance
 
 		GUILayout.Label ("Performance", EditorStyles.boldLabel);
 		Toggle ("Fast Preview", ref config.giSettings.fgPreview, "Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick preview of the final image lighting, reducing lighting setup time.");
+		config.giSettings.fgUseCache = (ILConfig.GISettings.Cache)EditorGUILayout.EnumPopup (new GUIContent ("Use Cache", "Selects what caching method to use for final gathering."), config.giSettings.fgUseCache);
 		Toggle ("Cache Direct Light", ref config.giSettings.fgCacheDirectLight, "When this is enabled final gather will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost. However this caching is only done for depths higher than 1, so the quality of direct light and shadows in the light map will not be reduced.");
 	}
 	
@@ -380,7 +390,8 @@ public class LMExtendedWindow : EditorWindow
 
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
 		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
-		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
+		// Not certain what this does
+//		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
 
 		// Points
 
