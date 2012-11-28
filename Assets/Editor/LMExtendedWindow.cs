@@ -108,7 +108,12 @@ public class LMExtendedWindow : EditorWindow
 				}
 			} else {
 				if (GUILayout.Button ("Bake Scene", GUILayout.Width (120))) {
-					Lightmapping.BakeAsync ();
+					if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL && string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
+						EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but no IBL image file is available. Either change the environment type or specify an HDR or EXR image file path.", "Ok");
+						Debug.LogError ("Lightmapping cancelled, environment type set to IBL but no IBL image file was specified.");
+					} else {
+						Lightmapping.BakeAsync ();
+					}
 				}
 			}
 		}
