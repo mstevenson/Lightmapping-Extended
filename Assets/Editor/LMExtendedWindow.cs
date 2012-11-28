@@ -427,7 +427,8 @@ public class LMExtendedWindow : EditorWindow
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
 			LMColorPicker ("Sky Light Color", ref config.environmentSettings.skyLightColor, "It is often a good idea to keep the color below 1.0 in intensity to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.");
 		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
-			EditorGUILayout.PrefixLabel (new GUIContent ("IBL Image", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
+			GUILayout.Label ("IBL Image", EditorStyles.boldLabel);
+			EditorGUILayout.PrefixLabel (new GUIContent ("Image Path", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
 			GUILayout.BeginHorizontal ();
 			{
 				GUILayout.Space (22);
@@ -447,33 +448,48 @@ public class LMExtendedWindow : EditorWindow
 				}
 			}
 			GUILayout.EndHorizontal ();
+			Toggle ("Swap Y/Z", ref config.environmentSettings.iblSwapYZ, "Swap the Up Axis. Default value is false, meaning that Y is up.");
 			Slider ("Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
 			FloatField ("Blur", ref config.environmentSettings.iblGIEnvBlur, "Pre-blur the environment image for Global Illumination calculations. Can help to reduce noise and flicker in images rendered with Final Gather. May increase render time as it is blurred at render time. It is always cheaper to pre-blur the image itself in an external application before loading it into Beast.");
 
-			EditorGUILayout.Space ();
-
-			Toggle ("Emit Light", ref config.environmentSettings.iblEmitLight, "Turns on the expensive IBL implementation. This will generate a number of (iblSamples) directional lights from the image.");
-
-			Toggle ("Diffuse", ref config.environmentSettings.iblEmitDiffuse, "To remove diffuse lighting from IBL, set this to false. To get the diffuse lighting Final Gather could be used instead.");
-
-			Toggle ("Shadows", ref config.environmentSettings.iblShadows, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
-			if (config.environmentSettings.iblShadows) {
-				EditorGUI.indentLevel++;
-				FloatField ("Shadow Noise", ref config.environmentSettings.iblBandingVsNoise, "Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows flicker more in animations.");
-				EditorGUI.indentLevel--;
-			}
+			GUILayout.Label ("IBL Light", EditorStyles.boldLabel);
 			
-			Toggle ("Specular", ref config.environmentSettings.iblEmitSpecular, "To remove specular highlights from IBL, set this to false.");
-			if (config.environmentSettings.iblEmitSpecular) {
+			Toggle ("Emit Light", ref config.environmentSettings.iblEmitLight, "Turns on the expensive IBL implementation. This will generate a number of (iblSamples) directional lights from the image.");
+			if (config.environmentSettings.iblEmitLight)
+				EditorGUILayout.HelpBox ("The scene will be lit by a number of directional lights with colors sampled from the IBL image. Very expensive.", MessageType.None);
+			else
+				EditorGUILayout.HelpBox ("The scene will be lit with Global Illumination using the IBL image as a simple environment.", MessageType.None);
+			
+			if (!config.environmentSettings.iblEmitLight)
+				GUI.enabled = false;
+			{
+				IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
+				FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
+				Toggle ("Diffuse", ref config.environmentSettings.iblEmitDiffuse, "To remove diffuse lighting from IBL, set this to false. To get the diffuse lighting Final Gather could be used instead.");
+				Toggle ("Specular", ref config.environmentSettings.iblEmitSpecular, "To remove specular highlights from IBL, set this to false.");
 				EditorGUI.indentLevel++;
-				FloatField ("Specular Boost", ref config.environmentSettings.iblSpecularBoost, "Further tweak the intensity by boosting the specular component.");
+				{
+					if (!config.environmentSettings.iblEmitSpecular)
+						GUI.enabled = false;
+					FloatField ("Specular Boost", ref config.environmentSettings.iblSpecularBoost, "Further tweak the intensity by boosting the specular component.");
+					if (config.environmentSettings.iblEmitLight)
+						GUI.enabled = true;
+				}
+				EditorGUI.indentLevel--;
+				Toggle ("Shadows", ref config.environmentSettings.iblShadows, "Controls whether shadows should be created from IBL when this is used.");
+				{
+					EditorGUI.indentLevel++;
+					if (!config.environmentSettings.iblShadows)
+						GUI.enabled = false;
+					FloatField ("Shadow Noise", ref config.environmentSettings.iblBandingVsNoise, "Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows flicker more in animations.");
+					if (config.environmentSettings.iblEmitLight)
+						GUI.enabled = true;
+				}
 				EditorGUI.indentLevel--;
 			}
-
+			GUI.enabled = true;
+			
 			EditorGUILayout.Space ();
-
-			IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
-			FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
 		}
 		EditorGUI.indentLevel--;
 		
