@@ -1,3 +1,6 @@
+// Copyright (c) 2012 Michael Stevenson
+// Licensed under the MIT license
+
 using UnityEngine;
 using System.Collections;
 using System.Xml;
@@ -422,7 +425,7 @@ public class ILConfig
 		/// <remarks>
 		/// Used for avoiding gamma correction errors and to scale HDR textures to something that fits your scene.
 		/// </remarks>
-		public float giEnvironmentIntensity = 0;
+		public float giEnvironmentIntensity = 0.2f;
 		/// <summary>
 		/// The image file to use for IBL, using an absolute path.
 		/// </summary>
@@ -569,7 +572,7 @@ public class ILConfig
 		/// global illumination render. Both subsystems have individual control of Intensity and Saturation
 		/// to boost the effects if necessary.
 		/// </summary>
-		public Integrator primaryIntegrator = Integrator.None;
+		public Integrator primaryIntegrator = Integrator.FinalGather;
 		/// <summary>
 		/// Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost
 		/// or reduce the amount of indirect light easily.
@@ -673,7 +676,7 @@ public class ILConfig
 		/// As a result light will bleed through the geometry. So to prevent this Beast can reject points
 		/// that are not visible.
 		/// </summary>
-		public bool fgCheckVisibility = false;
+		public bool fgCheckVisibility = true;
 		public float fgCheckVisibilityDepth = 1;
 		/// <summary>
 		/// Turn this on to clamp the sampled values to [0, 1]. This will reduce high frequency noise when
@@ -752,7 +755,7 @@ public class ILConfig
 		/// Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick
 		/// preview of the final image lighting, reducing lighting setup time.
 		/// </summary>
-		public bool fgPreview = true;
+		public bool fgPreview = false;
 		/// <summary>
 		/// Sets the maximum number of rays to use for each Final Gather sample point.
 		/// A higher number gives higher quality, but longer rendering time.
@@ -796,7 +799,7 @@ public class ILConfig
 		/// some of them can be located on the other side of geometry. As a result light will bleed through the
 		/// geometry. So to prevent this Beast can reject points that are not visible.
 		/// </summary>
-		public bool ptCheckVisibility = false;
+		public bool ptCheckVisibility = true;
 		public float ptConservativeEnergyLimit = 0.95f;
 		public LMColor ptDefaultColor = new LMColor (0, 0, 0, 1);
 		public int ptDepth = 5;
@@ -819,7 +822,7 @@ public class ILConfig
 		/// Selects the filter to use when querying the cache during rendering. None will return the closest
 		/// cache point (unfiltered). The filter type can be set to None, Box, Gauss or Triangle.
 		/// </summary>
-		public float ptNormalThreshold = 0.707f;
+		public float ptNormalThreshold = 0.7f;
 		/// <summary>
 		/// Sets the maximum distance between the points in the path tracer cache. If set to 0 a value will be
 		/// calculated automatically based on the size of the scene. The automatic value will be printed out

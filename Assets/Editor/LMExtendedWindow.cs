@@ -1,3 +1,6 @@
+// Copyright (c) 2012 Michael Stevenson
+// Licensed under the MIT license
+
 using UnityEngine;
 using UnityEditor;
 using System.Collections;
@@ -13,14 +16,14 @@ public class LMExtendedWindow : EditorWindow
 	[MenuItem ("Window/Lightmapping Extended")]
 	static void Init ()
 	{
-		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Advanced");
+		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
 	}
 	
 	public string ConfigFilePath {
 		get {
 			if (string.IsNullOrEmpty (EditorApplication.currentScene))
-				return null;
+				return "";
 			string root = Path.GetDirectoryName (EditorApplication.currentScene);
 			string dir = Path.GetFileNameWithoutExtension (EditorApplication.currentScene);
 			string path = Path.Combine (root, dir);
@@ -28,7 +31,6 @@ public class LMExtendedWindow : EditorWindow
 			return path;
 		}
 	}
-	
 	
 	
 	private int selected;
@@ -39,7 +41,7 @@ public class LMExtendedWindow : EditorWindow
 	void OnGUI ()
 	{
 		string path = ConfigFilePath;
-		if (path == null) {
+		if (string.IsNullOrEmpty (path)) {
 			GUILayout.Label ("Open a scene file to edit lightmap settings");
 			return;
 		}
@@ -57,13 +59,17 @@ public class LMExtendedWindow : EditorWindow
 
 		// Option to generate a config file
 		if (!haveConfigFile) {
+			EditorGUILayout.Space ();
 			if (GUILayout.Button ("Generate Beast settings file for current scene")) {
 				ILConfig newConfig = new ILConfig ();
+				var dir = Path.GetDirectoryName (ConfigFilePath);
+				if (!Directory.Exists (dir))
+					Directory.CreateDirectory (dir);
 				newConfig.Save (ConfigFilePath);
 				config = ILConfig.Load (path);
 				AssetDatabase.Refresh ();
+				GUIUtility.ExitGUI ();
 			}
-			GUIUtility.ExitGUI ();
 			return;
 		}
 
@@ -76,6 +82,7 @@ public class LMExtendedWindow : EditorWindow
 		case 0:
 			PerformanceSettingsGUI ();
 			TextureBakeGUI ();
+			AASettingsGUI ();
 			RenderSettingsGUI ();
 			break;
 		case 1:
@@ -90,24 +97,32 @@ public class LMExtendedWindow : EditorWindow
 			config.Save (ConfigFilePath);
 		}
 		
-//		GUILayout.BeginHorizontal ();
-//		{
-//			if (GUILayout.Button ("Clear")) {
-//				Lightmapping.Clear ();
-//			}
-//			if (Lightmapping.isRunning) {
-//				if (GUILayout.Button ("Cancel")) {
-//					Lightmapping.Cancel ();
-//				}
-//			} else {
-//				if (GUILayout.Button ("Bake")) {
-//					Lightmapping.Bake ();
-//				}
-//			}
-//		}
-//		GUILayout.EndHorizontal ();
-
 		EditorGUILayout.EndScrollView ();
+		
+		EditorGUILayout.Space ();
+		GUILayout.BeginHorizontal ();
+		{
+			GUILayout.FlexibleSpace ();
+			if (GUILayout.Button ("Clear", GUILayout.Width (120))) {
+				Lightmapping.Clear ();
+			}
+			if (Lightmapping.isRunning) {
+				if (GUILayout.Button ("Cancel", GUILayout.Width (120))) {
+					Lightmapping.Cancel ();
+				}
+			} else {
+				if (GUILayout.Button ("Bake Scene", GUILayout.Width (120))) {
+					if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL && string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
+						EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but no IBL image file is available. Either change the environment type or specify an HDR or EXR image file path.", "Ok");
+						Debug.LogError ("Lightmapping cancelled, environment type set to IBL but no IBL image file was specified.");
+					} else {
+						Lightmapping.BakeAsync ();
+					}
+				}
+			}
+		}
+		GUILayout.EndHorizontal ();
+		EditorGUILayout.Space ();
 	}
 
 	void OnSelectionChange ()
@@ -140,7 +155,7 @@ public class LMExtendedWindow : EditorWindow
 	void PerformanceSettingsGUI ()
 	{
 		// Threads
-		GUILayout.Label ("Threads", EditorStyles.boldLabel);
+		GUILayout.Label ("CPU", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		Toggle ("Auto Threads", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
 		EditorGUI.indentLevel++;
@@ -173,7 +188,26 @@ public class LMExtendedWindow : EditorWindow
 //		Toggle ("Verbose Print", ref config.frameSettings.outputVerbosity.verbosePrint, "");
 //		EditorGUI.indentLevel--;
 	}
-
+	
+	void AASettingsGUI ()
+	{
+		GUILayout.Label ("Antialiasing", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
+		config.aaSettings.samplingMode = (ILConfig.AASettings.SamplingMode)EditorGUILayout.EnumPopup (new GUIContent ("Sampling Mode", ""), config.aaSettings.samplingMode);
+		EditorGUI.indentLevel++;
+		IntField ("Min Sample Rate", ref config.aaSettings.minSampleRate, "Controls the minimum number of samples per pixel. The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)");
+		IntField ("Max Sample Rate", ref config.aaSettings.maxSampleRate, "Controls the maximum number of samples per pixel. Values less than 0 allows using less than one sample per pixel (if AdaptiveSampling is used). The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)");
+		EditorGUI.indentLevel--;
+		FloatField ("Contrast", ref config.aaSettings.contrast, "If the contrast differs less than this threshold Beast will consider the sampling good enough. Default value is 0.1.");
+		config.aaSettings.filter = (ILConfig.AASettings.Filter)EditorGUILayout.EnumPopup (new GUIContent ("Filter", "The sub-pixel filter to use."), config.aaSettings.filter);
+		EditorGUILayout.PrefixLabel (new GUIContent ("Filter Size"));
+		EditorGUI.indentLevel++;
+		FloatField ("X", ref config.aaSettings.filterSize.x, "");
+		FloatField ("Y", ref config.aaSettings.filterSize.y, "");
+		EditorGUI.indentLevel--;
+		EditorGUI.indentLevel--;
+	}
+	
 	void RenderSettingsGUI ()
 	{
 		GUILayout.Label ("Rays", EditorStyles.boldLabel);
@@ -210,7 +244,11 @@ public class LMExtendedWindow : EditorWindow
 	void GlobalIlluminationGUI ()
 	{
 		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
-		Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
+		if (!config.giSettings.enableGI)
+			GUI.enabled = false;
+		
+		// Caustics are not available in Unity 4
+		//Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
 
 		EditorGUILayout.Space ();
 
@@ -230,23 +268,20 @@ public class LMExtendedWindow : EditorWindow
 			if (!config.giSettings.fgLightLeakReduction)
 				GUI.enabled = false;
 			FloatField ("Light Leak Radius", ref config.giSettings.fgLightLeakRadius, "Controls how far away from walls the final gather will be called again, instead of the secondary GI. If 0.0 is used a value will be calculated by Beast depending on the secondary GI used. The calculated value is printed in the output window. If you still get leakage you can adjust this by manually typing in a higher value.");
-			GUI.enabled = true;
+			if (config.giSettings.enableGI)
+				GUI.enabled = true;
 		}
+		
+		GUI.enabled = true;
 	}
 
 	void IntegratorPopup (bool isPrimary)
 	{
-//		int index = -1;
-//		string[] names = new string[] { "None", "Final Gather", "Path Tracer", "Monte Carlo" };
 		if (isPrimary) {
-//			index = EditorGUILayout.Popup ((int)config.giSettings.primaryIntegrator, names);
-//			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)System.Enum.Parse (typeof(ILConfig.GISettings.Integrator), index.ToString ());
 			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.primaryIntegrator);
 		}
 		else {
 			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.secondaryIntegrator);
-//			index = EditorGUILayout.Popup ((int)config.giSettings.secondaryIntegrator, names);
-//			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)System.Enum.Parse (typeof(ILConfig.GISettings.Integrator), index.ToString ());
 		}
 	}
 
@@ -311,7 +346,8 @@ public class LMExtendedWindow : EditorWindow
 		if (config.giSettings.fgAttenuationStop == 0)
 			GUI.enabled = false;
 		FloatField ("Falloff Exponent", ref config.giSettings.fgFalloffExponent, "This can be used to adjust the rate by which lighting falls off by distance. A higher exponent gives a faster falloff. Note that fgAttenuationStop must be set higher than 0.0 to enable attenuation.");
-		GUI.enabled = true;
+		if (config.giSettings.enableGI)
+			GUI.enabled = true;
 		EditorGUI.indentLevel--;
 		EditorGUI.indentLevel--;
 
@@ -319,11 +355,12 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Points", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 50, "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below.");
+		IntSlider ("Interpolation Points", ref config.giSettings.fgInterpolationPoints, 1, 40, "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below.");
+		IntSlider ("Estimate Points", ref config.giSettings.fgEstimatePoints, 1, 40, "Sets the minimum number of points that should be used when estimating final gather in the pre calculation pass. The impact is that a higher value will create more points all over the scene. The default value 15 rarely needs to be adjusted.");
+		Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
 		FloatField ("Contrast Threshold", ref config.giSettings.fgContrastThreshold, "Controls how sensitive the final gather should be for contrast differences between the points during pre calculation. If the contrast difference is above this threshold for neighbouring points, more points will be created in that area. This tells the algorithm to place points where they are really needed, e.g. at shadow boundaries or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high variance and hence a high contrast difference, so in that case you might need to increase the contrast threshold to prevent points from clumping together.");
 		FloatField ("Gradient Threshold", ref config.giSettings.fgGradientThreshold, "Controls how the irradiance gradient is used in the interpolation. Each point stores it's irradiance gradient which can be used to improve the interpolation. However in some situations using the gradient can result in white 'halos' and other artifacts. This threshold can be used to reduce those artifacts.");
 		FloatField ("Normal Threshold", ref config.giSettings.fgNormalThreshold, "Controls how sensitive the final gather should be for differences in the points normals. A lower value will give more points in areas of high curvature.");
-		Toggle ("Check Visibility", ref config.giSettings.fgCheckVisibility, "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible.");
 		Toggle ("Clamp Radiance", ref config.giSettings.fgClampRadiance, "Turn this on to clamp the sampled values to [0, 1]. This will reduce high frequency noise when Final Gather is used together with other Global Illumination algorithms.");
 		EditorGUI.indentLevel--;
 		
@@ -331,7 +368,8 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Ambient Occlusion", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
+		// Not used by Unity
+//		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
 		Slider ("Influence", ref config.giSettings.fgAOInfluence, 0, 1, "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution.");
 		LightmapEditorSettings.aoAmount = config.giSettings.fgAOInfluence;
 		if (config.giSettings.fgAOInfluence <= 0)
@@ -341,12 +379,14 @@ public class LMExtendedWindow : EditorWindow
 		FloatField ("Max Distance", ref config.giSettings.fgAOMaxDistance, "Max distance for the occlusion. Beyond this distance a ray is considered to be visible. Can be used to avoid full occlusion for closed scenes.");
 		LightmapEditorSettings.aoMaxDistance = config.giSettings.fgAOMaxDistance;
 		FloatField ("Scale", ref config.giSettings.fgAOScale, "A scaling of the occlusion values. Can be used to increase or decrease the shadowing effect.");
-		GUI.enabled = true;
+		if (config.giSettings.enableGI)
+			GUI.enabled = true;
 
 		// Performance
 
 		GUILayout.Label ("Performance", EditorStyles.boldLabel);
 		Toggle ("Fast Preview", ref config.giSettings.fgPreview, "Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick preview of the final image lighting, reducing lighting setup time.");
+		config.giSettings.fgUseCache = (ILConfig.GISettings.Cache)EditorGUILayout.EnumPopup (new GUIContent ("Use Cache", "Selects what caching method to use for final gathering."), config.giSettings.fgUseCache);
 		Toggle ("Cache Direct Light", ref config.giSettings.fgCacheDirectLight, "When this is enabled final gather will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost. However this caching is only done for depths higher than 1, so the quality of direct light and shadows in the light map will not be reduced.");
 	}
 	
@@ -358,8 +398,9 @@ public class LMExtendedWindow : EditorWindow
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
-		Slider ("Accuracy", ref config.giSettings.ptAccuracy, 0, 4, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
-		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
+		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
+		// Not certain what this does
+//		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
 
 		// Points
 
@@ -406,7 +447,8 @@ public class LMExtendedWindow : EditorWindow
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
 			LMColorPicker ("Sky Light Color", ref config.environmentSettings.skyLightColor, "It is often a good idea to keep the color below 1.0 in intensity to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.");
 		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
-			EditorGUILayout.PrefixLabel (new GUIContent ("IBL Image", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
+			GUILayout.Label ("IBL Image", EditorStyles.boldLabel);
+			EditorGUILayout.PrefixLabel (new GUIContent ("Image Path", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
 			GUILayout.BeginHorizontal ();
 			{
 				GUILayout.Space (22);
@@ -426,33 +468,48 @@ public class LMExtendedWindow : EditorWindow
 				}
 			}
 			GUILayout.EndHorizontal ();
-			Slider ("Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
+			Toggle ("Swap Y/Z", ref config.environmentSettings.iblSwapYZ, "Swap the Up Axis. Default value is false, meaning that Y is up.");
+			Slider ("Dome Rotation", ref config.environmentSettings.iblTurnDome, 0, 360, "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0.");
 			FloatField ("Blur", ref config.environmentSettings.iblGIEnvBlur, "Pre-blur the environment image for Global Illumination calculations. Can help to reduce noise and flicker in images rendered with Final Gather. May increase render time as it is blurred at render time. It is always cheaper to pre-blur the image itself in an external application before loading it into Beast.");
 
-			EditorGUILayout.Space ();
-
-			Toggle ("Emit Light", ref config.environmentSettings.iblEmitLight, "Turns on the expensive IBL implementation. This will generate a number of (iblSamples) directional lights from the image.");
-
-			Toggle ("Diffuse", ref config.environmentSettings.iblEmitDiffuse, "To remove diffuse lighting from IBL, set this to false. To get the diffuse lighting Final Gather could be used instead.");
-
-			Toggle ("Shadows", ref config.environmentSettings.iblShadows, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
-			if (config.environmentSettings.iblShadows) {
-				EditorGUI.indentLevel++;
-				FloatField ("Shadow Noise", ref config.environmentSettings.iblBandingVsNoise, "Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows flicker more in animations.");
-				EditorGUI.indentLevel--;
-			}
+			GUILayout.Label ("IBL Light", EditorStyles.boldLabel);
 			
-			Toggle ("Specular", ref config.environmentSettings.iblEmitSpecular, "To remove specular highlights from IBL, set this to false.");
-			if (config.environmentSettings.iblEmitSpecular) {
+			Toggle ("Emit Light", ref config.environmentSettings.iblEmitLight, "Turns on the expensive IBL implementation. This will generate a number of (iblSamples) directional lights from the image.");
+			if (config.environmentSettings.iblEmitLight)
+				EditorGUILayout.HelpBox ("The scene will be lit by a number of directional lights with colors sampled from the IBL image. Very expensive.", MessageType.None);
+			else
+				EditorGUILayout.HelpBox ("The scene will be lit with Global Illumination using the IBL image as a simple environment.", MessageType.None);
+			
+			if (!config.environmentSettings.iblEmitLight)
+				GUI.enabled = false;
+			{
+				IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
+				FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
+				Toggle ("Diffuse", ref config.environmentSettings.iblEmitDiffuse, "To remove diffuse lighting from IBL, set this to false. To get the diffuse lighting Final Gather could be used instead.");
+				Toggle ("Specular", ref config.environmentSettings.iblEmitSpecular, "To remove specular highlights from IBL, set this to false.");
 				EditorGUI.indentLevel++;
-				FloatField ("Specular Boost", ref config.environmentSettings.iblSpecularBoost, "Further tweak the intensity by boosting the specular component.");
+				{
+					if (!config.environmentSettings.iblEmitSpecular)
+						GUI.enabled = false;
+					FloatField ("Specular Boost", ref config.environmentSettings.iblSpecularBoost, "Further tweak the intensity by boosting the specular component.");
+					if (config.environmentSettings.iblEmitLight)
+						GUI.enabled = true;
+				}
+				EditorGUI.indentLevel--;
+				Toggle ("Shadows", ref config.environmentSettings.iblShadows, "Controls whether shadows should be created from IBL when this is used.");
+				{
+					EditorGUI.indentLevel++;
+					if (!config.environmentSettings.iblShadows)
+						GUI.enabled = false;
+					FloatField ("Shadow Noise", ref config.environmentSettings.iblBandingVsNoise, "Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows flicker more in animations.");
+					if (config.environmentSettings.iblEmitLight)
+						GUI.enabled = true;
+				}
 				EditorGUI.indentLevel--;
 			}
-
+			GUI.enabled = true;
+			
 			EditorGUILayout.Space ();
-
-			IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
-			FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
 		}
 		EditorGUI.indentLevel--;
 		
@@ -464,17 +521,22 @@ public class LMExtendedWindow : EditorWindow
 	{
 		GUILayout.Label ("Texture", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-
-		LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "Counteract unwanted light seams for tightly packed UV patches.");
-		IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
-		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
-		EditorGUI.indentLevel++;
-		if (!config.frameSettings.premultiply) {
-			GUI.enabled = false;
-		}
-		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
-		EditorGUI.indentLevel--;
-		GUI.enabled = true;
+		
+		// FIXME The following have no effect in Unity 4.0:
+		
+		//LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "");
+		//IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
+		//Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+		//EditorGUI.indentLevel++;
+		//if (!config.frameSettings.premultiply) {
+		//	GUI.enabled = false;
+		//}
+		//FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
+		//EditorGUI.indentLevel--;
+		//GUI.enabled = true;
+		
+		Toggle ("Bilinear Filter", ref config.textureBakeSettings.bilinearFilter, "Counteract unwanted light seams for tightly packed UV patches.");
+		Toggle ("Conservative Rasterization", ref config.textureBakeSettings.conservativeRasterization, "Find pixels which are only partially covered by the UV map.");
 
 		EditorGUI.indentLevel--;
 	}
@@ -507,11 +569,6 @@ public class LMExtendedWindow : EditorWindow
 		val = EditorGUILayout.IntField (new GUIContent (name, tooltip), val);
 	}
 
-//	private void LongToIntField (string name, ref long val, string tooltip)
-//	{
-//		val = (long)EditorGUILayout.IntField (new GUIContent (name, tooltip), (int)val);
-//	}
-
 	private void IntSlider (string name, ref int val, int min, int max, string tooltip)
 	{
 		val = EditorGUILayout.IntSlider (new GUIContent (name, tooltip), val, min, max);
@@ -519,7 +576,7 @@ public class LMExtendedWindow : EditorWindow
 
 	private void MinMaxField (string name, ref float min, ref float max, string tooltip) {
 		GUILayout.BeginHorizontal ();
-		GUILayout.Space (11 * EditorGUI.indentLevel);
+		GUILayout.Space (15 * EditorGUI.indentLevel);
 		GUILayout.Label (new GUIContent (name, tooltip));
 		min = EditorGUILayout.FloatField (min);
 		if (min < 0)
