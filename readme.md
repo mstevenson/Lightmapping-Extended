@@ -21,16 +21,16 @@ Lightmapping Extended's default settings will match Unity's "High Quality" prese
 
 **Global Illumination > Final Gather**
 
-- Rays: 200 to 1000
-- Check Visibility: False to True
-- Contrast Threshold: 0.1 to 0.05
+- Rays: 1000 to 200
+- Check Visibility: True to False
+- Contrast Threshold: 0.05 to 0.1
 - Fast Preview: False to True
 
 **Settings > Antialiasing**
 
-- Filter: Box to Gauss
-- Filter Size: (1, 1) to (2.2, 2.2)
+- Filter: Gauss to Box
+- Filter Size: (2.2, 2.2) to (1, 1)
 
 **Settings > Shadows**
 
-- Max Shadow Rays: 4 to 10000
+- Max Shadow Rays: 10000 to 4
