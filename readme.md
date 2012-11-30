@@ -12,4 +12,25 @@ Usage
 
 To integrate Lightmapping Extended into an existing Unity project, copy the directory ***Lightmapping-Extended/Assets/Editor/*** into your project's Assets folder. The tool's editor window can be accessed from the menu ***Window > Lightmapping Extended***.
 
-Configuration options are scene-specific. If the current scene does not include a lightmap configuration file, the Lightmapping Extended editor window will provide an option to create one. Lightmapping Extended's default settings will match Unity's "High Quality" preset.
+Configuration options are scene-specific. If the current scene does not include a lightmap configuration file, the Lightmapping Extended editor window will provide an option to create one.
+
+Defaults
+--------
+
+Lightmapping Extended's default settings will match Unity's "High Quality" preset. To reproduce Unity's Low Quality preset, change the following settings:
+
+**Global Illumination > Final Gather**
+
+- Rays: 200 to 1000
+- Check Visibility: False to True
+- Contrast Threshold: 0.1 to 0.05
+- Fast Preview: False to True
+
+**Settings > Antialiasing**
+
+- Filter: Box to Gauss
+- Filter Size: (1, 1) to (2.2, 2.2)
+
+**Settings > Shadows**
+
+- Max Shadow Rays: 4 to 10000
