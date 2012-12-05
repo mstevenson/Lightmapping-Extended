@@ -13,7 +13,7 @@ public class LMExtendedWindow : EditorWindow
 	
 	private ILConfig config;
 
-	[MenuItem ("Window/Lightmapping Extended")]
+	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
 	static void Init ()
 	{
 		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Extended");
