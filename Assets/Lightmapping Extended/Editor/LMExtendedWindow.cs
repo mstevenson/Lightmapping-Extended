@@ -94,7 +94,7 @@ public class LMExtendedWindow : EditorWindow
 		}
 		
 		if (GUI.changed) {
-			config.Save (ConfigFilePath);
+			SaveConfig ();
 		}
 		
 		EditorGUILayout.EndScrollView ();
@@ -121,7 +121,12 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
 	}
-
+	
+	void SaveConfig ()
+	{
+		config.Save (ConfigFilePath);
+	}
+	
 	void OnSelectionChange ()
 	{
 		if (!File.Exists (ConfigFilePath))
@@ -450,6 +455,20 @@ public class LMExtendedWindow : EditorWindow
 			{
 				GUILayout.Space (22);
 				config.environmentSettings.iblImageFile = EditorGUILayout.TextField (config.environmentSettings.iblImageFile);
+			}
+			GUILayout.EndHorizontal ();
+			GUILayout.BeginHorizontal ();
+			{
+				GUILayout.FlexibleSpace ();
+				if (!string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
+					if (GUILayout.Button ("Reveal", GUILayout.Width (54))) {
+						EditorUtility.OpenWithDefaultApp (Path.GetDirectoryName (config.environmentSettings.iblImageFile));
+					}
+					if (GUILayout.Button ("Edit", GUILayout.Width (54))) {
+						EditorUtility.OpenWithDefaultApp (config.environmentSettings.iblImageFile);
+					}
+					GUILayout.Space (8);
+				}
 				if (GUILayout.Button ("Choose", GUILayout.Width (54))) {
 					string file = EditorUtility.OpenFilePanel ("Select EXR or HDR file", "", "");
 					string ext = Path.GetExtension (file);
@@ -458,6 +477,8 @@ public class LMExtendedWindow : EditorWindow
 							config.environmentSettings.iblImageFile = file;
 							GUI.changed = true;
 							Repaint ();
+							SaveConfig ();
+							GUIUtility.ExitGUI ();
 						} else {
 							Debug.LogError ("IBL image files must use the extension .exr or .hdr");
 						}
