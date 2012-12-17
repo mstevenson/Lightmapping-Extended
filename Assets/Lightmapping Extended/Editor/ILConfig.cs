@@ -75,7 +75,7 @@ public class ILConfig
 	public TextureBakeSettings textureBakeSettings = new TextureBakeSettings ();
 	
 	
-	public static ILConfig Load (string path)
+	public static ILConfig DeserializeFromPath (string path)
 	{
 		FileInfo info = new FileInfo (path);
 		if (!info.Exists) {
@@ -91,7 +91,7 @@ public class ILConfig
 		return config;
 	}
 
-	public void Save (string path)
+	public void SerializeToPath (string path)
 	{	
 		using (XmlTextWriter writer = new XmlTextWriter (path, System.Text.Encoding.GetEncoding ("ISO-8859-1"))) {
 			XmlSerializerNamespaces ns = new XmlSerializerNamespaces ();
@@ -102,7 +102,21 @@ public class ILConfig
 		}
 	}
 	
+	public string SerializeToString ()
+	{
+		StringWriter writer = new StringWriter ();
+		XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
+		serializer.Serialize (writer, this);
+		return writer.ToString ();
+	}
 	
+	public static ILConfig DeserializeFromString (string configString)
+	{
+		XmlSerializer serializer = new XmlSerializer (typeof(ILConfig));
+		TextReader reader = new StringReader (configString);
+		ILConfig config = (ILConfig)serializer.Deserialize (reader);
+		return config;
+	}
 	
 	[System.Serializable]
 	public class FrameSettings

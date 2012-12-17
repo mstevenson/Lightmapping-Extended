@@ -1,16 +1,14 @@
 // Copyright (c) 2012 Michael Stevenson
 // Licensed under the MIT license
-
 using UnityEngine;
 using UnityEditor;
 using System.Collections;
 using System.IO;
-
+using System.Collections.Generic;
 
 public class LMExtendedWindow : EditorWindow
 {
 	static LMExtendedWindow window;
-	
 	private ILConfig config;
 
 	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
@@ -32,9 +30,7 @@ public class LMExtendedWindow : EditorWindow
 		}
 	}
 	
-	
 	private int selected;
-
 	[SerializeField]
 	Vector2 scroll;
 
@@ -50,7 +46,7 @@ public class LMExtendedWindow : EditorWindow
 		bool haveConfigFile = false;
 		if (config == null) {
 			if (File.Exists (path)) {
-				config = ILConfig.Load (path);
+				config = ILConfig.DeserializeFromPath (path);
 				haveConfigFile = true;
 			}
 		} else {
@@ -65,8 +61,8 @@ public class LMExtendedWindow : EditorWindow
 				var dir = Path.GetDirectoryName (ConfigFilePath);
 				if (!Directory.Exists (dir))
 					Directory.CreateDirectory (dir);
-				newConfig.Save (ConfigFilePath);
-				config = ILConfig.Load (path);
+				newConfig.SerializeToPath (ConfigFilePath);
+				config = ILConfig.DeserializeFromPath (path);
 				AssetDatabase.Refresh ();
 				GUIUtility.ExitGUI ();
 			}
@@ -124,7 +120,7 @@ public class LMExtendedWindow : EditorWindow
 	
 	void SaveConfig ()
 	{
-		config.Save (ConfigFilePath);
+		config.SerializeToPath (ConfigFilePath);
 	}
 	
 	void OnSelectionChange ()
@@ -149,7 +145,8 @@ public class LMExtendedWindow : EditorWindow
 	}
 	
 
-	public enum ShadowDepth {
+	public enum ShadowDepth
+	{
 		PrimaryRays = 1,
 		PrimaryAndSecondaryRays = 2
 	}
@@ -281,8 +278,7 @@ public class LMExtendedWindow : EditorWindow
 	{
 		if (isPrimary) {
 			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.primaryIntegrator);
-		}
-		else {
+		} else {
 			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.secondaryIntegrator);
 		}
 	}
@@ -320,7 +316,6 @@ public class LMExtendedWindow : EditorWindow
 		}
 		EditorGUI.indentLevel--;
 	}
-	
 	
 	void FinalGatherSettings (bool isPrimaryIntegrator)
 	{
@@ -534,7 +529,6 @@ public class LMExtendedWindow : EditorWindow
 		GUI.enabled = true;
 	}
 	
-	
 	void TextureBakeGUI ()
 	{
 		GUILayout.Label ("Texture", EditorStyles.boldLabel);
@@ -558,7 +552,35 @@ public class LMExtendedWindow : EditorWindow
 
 		EditorGUI.indentLevel--;
 	}
-
+	
+	string currentPresetName = "";
+	
+	void PresetSelectionGUI ()
+	{
+		currentPresetName = PresetsPopup ("Presets", currentPresetName);
+//		if (config != GetPresetConfig (currentPresetName)) {
+//			currentPresetName = "Custom";
+//		}
+		
+		EditorGUILayout.BeginHorizontal ();
+		{
+			if (GUILayout.Button ("Create")) {
+				
+			}
+		
+			if (currentPresetName == "Custom")
+				GUI.enabled = false;
+			if (GUILayout.Button ("Delete")) {
+				// delete preset
+			}
+			GUI.enabled = true;
+		}
+		EditorGUILayout.EndHorizontal ();
+		
+		if (GUI.changed && currentPresetName != "Custom") {
+			this.config = LoadPreset (name);
+		}
+	}
 	
 	bool CheckSettingsIntegrity ()
 	{
@@ -578,6 +600,8 @@ public class LMExtendedWindow : EditorWindow
 	}
 	
 
+	#region GUI Elements
+	
 	private void LMColorPicker (string name, ref ILConfig.LMColor color, string tooltip)
 	{
 		Color c = EditorGUILayout.ColorField (new GUIContent (name, tooltip), new Color (color.r, color.g, color.b, color.a));
@@ -609,7 +633,8 @@ public class LMExtendedWindow : EditorWindow
 		val = EditorGUILayout.IntSlider (new GUIContent (name, tooltip), val, min, max);
 	}
 
-	private void MinMaxField (string name, ref float min, ref float max, string tooltip) {
+	private void MinMaxField (string name, ref float min, ref float max, string tooltip)
+	{
 		GUILayout.BeginHorizontal ();
 		GUILayout.Space (15 * EditorGUI.indentLevel);
 		GUILayout.Label (new GUIContent (name, tooltip));
@@ -625,4 +650,67 @@ public class LMExtendedWindow : EditorWindow
 			min = max;
 		GUILayout.EndHorizontal ();
 	}
+	
+	private string PresetsPopup (string label, string presetString)
+	{
+		List<string> presets = new List<string> (GetPresets ());
+		int presetIndex = presets.IndexOf (presetString);
+		
+		// Include a "Custom" option at the beginning of the list
+		presets.Insert (0, "Custom");
+		// Shift the indexes forward to account for the new "Custom" option
+		presetIndex++;
+		
+		presetIndex = EditorGUILayout.Popup (label, presetIndex, presets.ToArray ());
+		string newPresetName = presets [presetIndex];
+		return newPresetName;
+	}
+	
+	#endregion
+	
+	
+	#region Presets
+	
+	string[] GetPresets ()
+	{
+		string presetsListString = EditorPrefs.GetString ("LMPresetsList");
+		string[] presets = presetsListString.Split (':');
+		return presets;
+	}
+	
+	void SetPresets (string[] presetsList)
+	{
+		var builder = new System.Text.StringBuilder ();
+		for (int i = 0; i < presetsList.Length - 1; i++) {
+			builder.Append (presetsList [i]);
+			builder.Append (":");
+		}
+		EditorPrefs.SetString ("LMPresetsList", builder.ToString ());
+	}
+	
+	void SavePreset (ILConfig config, string name)
+	{
+		string newPreset = "LMPreset-" + name;
+		EditorPrefs.SetString (newPreset, config.SerializeToString ());
+		var presets = new List<string> (GetPresets ());
+		presets.Add (newPreset);
+		SetPresets (presets.ToArray ());
+	}
+	
+	void DeletePreset (string name)
+	{
+		EditorPrefs.DeleteKey (name);
+		var presets = new List<string> (GetPresets ());
+		presets.Remove (name);
+		SetPresets (presets.ToArray ());
+	}
+	
+	ILConfig LoadPreset (string name)
+	{
+		string configString = EditorPrefs.GetString ("LMPreset-" + name);
+		return ILConfig.DeserializeFromString (configString);
+	}
+	
+	#endregion
 }
+
