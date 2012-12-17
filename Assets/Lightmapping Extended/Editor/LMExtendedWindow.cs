@@ -41,7 +41,7 @@ public class LMExtendedWindow : EditorWindow
 			GUILayout.Label ("Open a scene file to edit lightmap settings");
 			return;
 		}
-
+		
 		// Determine if config file exists
 		bool haveConfigFile = false;
 		if (config == null) {
@@ -68,7 +68,14 @@ public class LMExtendedWindow : EditorWindow
 			}
 			return;
 		}
-
+		
+		EditorGUILayout.Space ();
+		
+		PresetSelectionGUI ();
+		
+		EditorGUILayout.Space ();
+		
+		
 		selected = GUILayout.Toolbar (selected, new string[] {"Settings", "Global Illum", "Environment"});
 		EditorGUILayout.Space ();
 
@@ -557,34 +564,47 @@ public class LMExtendedWindow : EditorWindow
 	
 	void PresetSelectionGUI ()
 	{
-		currentPresetName = PresetsPopup ("Presets", currentPresetName);
+		GUILayout.BeginHorizontal ();
+		
+		GUILayout.Label ("Preset: ");
+		
+		currentPresetName = PresetsPopup (currentPresetName);
 //		if (config != GetPresetConfig (currentPresetName)) {
 //			currentPresetName = "Custom";
 //		}
 		
 		EditorGUILayout.BeginHorizontal ();
 		{
-			if (GUILayout.Button ("Create")) {
-				
-			}
-		
+			GUILayout.FlexibleSpace ();
 			if (currentPresetName == "Custom")
 				GUI.enabled = false;
-			if (GUILayout.Button ("Delete")) {
+			if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (60))) {
 				// delete preset
 			}
 			GUI.enabled = true;
+			
+			if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (60))) {
+				SavePreset ();
+			}
 		}
 		EditorGUILayout.EndHorizontal ();
 		
 		if (GUI.changed && currentPresetName != "Custom") {
-			this.config = LoadPreset (name);
+			this.config = LoadPreset (currentPresetName);
 		}
+		
+		GUILayout.EndHorizontal ();
+	}
+	
+	void SavePreset ()
+	{
+		Rect pos = new Rect (0, 0, 300, 100);
+		var window = EditorWindow.GetWindowWithRect<SavePresetWindow> (pos, true, "Save Preset", true);
+		window.lmExtendedWindow = this;
 	}
 	
 	bool CheckSettingsIntegrity ()
 	{
-		
 		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
 			if (string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
 				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but no IBL image file is available. Either change the environment type or specify an HDR or EXR image file path.", "Ok");
@@ -651,7 +671,7 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.EndHorizontal ();
 	}
 	
-	private string PresetsPopup (string label, string presetString)
+	private string PresetsPopup (string presetString)
 	{
 		List<string> presets = new List<string> (GetPresets ());
 		int presetIndex = presets.IndexOf (presetString);
@@ -661,7 +681,7 @@ public class LMExtendedWindow : EditorWindow
 		// Shift the indexes forward to account for the new "Custom" option
 		presetIndex++;
 		
-		presetIndex = EditorGUILayout.Popup (label, presetIndex, presets.ToArray ());
+		presetIndex = EditorGUILayout.Popup (presetIndex, presets.ToArray ());
 		string newPresetName = presets [presetIndex];
 		return newPresetName;
 	}
@@ -673,25 +693,34 @@ public class LMExtendedWindow : EditorWindow
 	
 	string[] GetPresets ()
 	{
+		string[] presets = new string [0];
 		string presetsListString = EditorPrefs.GetString ("LMPresetsList");
-		string[] presets = presetsListString.Split (':');
+		if (presetsListString.Length != 0)
+			presets = presetsListString.Split (':');
+		for (int i = 0; i < presets.Length; i++) {
+			if (presets[i].StartsWith ("LMPreset-"))
+				presets[i] = presets[i].Substring (9);
+		}
 		return presets;
 	}
 	
 	void SetPresets (string[] presetsList)
-	{
+	{	
 		var builder = new System.Text.StringBuilder ();
-		for (int i = 0; i < presetsList.Length - 1; i++) {
+		for (int i = 0; i < presetsList.Length; i++) {
+			builder.Append ("LMPreset-");
 			builder.Append (presetsList [i]);
-			builder.Append (":");
+			if (i < presetsList.Length - 1)
+				builder.Append (":");
 		}
 		EditorPrefs.SetString ("LMPresetsList", builder.ToString ());
 	}
 	
 	void SavePreset (ILConfig config, string name)
 	{
-		string newPreset = "LMPreset-" + name;
-		EditorPrefs.SetString (newPreset, config.SerializeToString ());
+		string newPreset = name;
+		string configXml = config.SerializeToString ();
+		EditorPrefs.SetString (newPreset, configXml);
 		var presets = new List<string> (GetPresets ());
 		presets.Add (newPreset);
 		SetPresets (presets.ToArray ());
@@ -709,6 +738,11 @@ public class LMExtendedWindow : EditorWindow
 	{
 		string configString = EditorPrefs.GetString ("LMPreset-" + name);
 		return ILConfig.DeserializeFromString (configString);
+	}
+	
+	public void SaveOrCreatePreset (string name)
+	{
+		SavePreset (this.config, name);
 	}
 	
 	#endregion
