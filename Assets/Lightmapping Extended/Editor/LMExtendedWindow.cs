@@ -722,7 +722,7 @@ public class LMExtendedWindow : EditorWindow
 	string[] GetPresetNames ()
 	{
 		if (Directory.Exists (presetsFolderPath)) {
-			string[] files = Directory.GetFiles (presetsFolderPath, "*.xml");
+			string[] files = Directory.GetFiles (presetsFolderPath, "*.xml", SearchOption.AllDirectories);
 			string[] presetNames = files.Select (s => s.Remove (0, presetsFolderPath.Length + 1).Replace (".xml", "")).ToArray ();
 			return presetNames;
 		} else {
