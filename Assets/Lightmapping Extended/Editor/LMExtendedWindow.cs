@@ -133,10 +133,6 @@ public class LMExtendedWindow : EditorWindow
 		}
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
-		
-		if (GUI.changed) {
-			Debug.Log ("a");
-		}
 	}
 	
 	void SaveConfig ()
