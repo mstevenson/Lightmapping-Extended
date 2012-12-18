@@ -732,8 +732,10 @@ public class LMExtendedWindow : EditorWindow
 	
 	public void SavePreset (string name)
 	{
-		if (!Directory.Exists (presetsFolderPath)) {
-			Directory.CreateDirectory (presetsFolderPath);
+		var dir = presetsFolderPath + "/" + Path.GetDirectoryName (name);
+		if (!Directory.Exists (dir)) {
+			Debug.Log ("Create " + dir);
+			Directory.CreateDirectory (dir);
 		}
 		this.config.SerializeToPath (GetPresetPath (name));
 		AssetDatabase.Refresh ();
