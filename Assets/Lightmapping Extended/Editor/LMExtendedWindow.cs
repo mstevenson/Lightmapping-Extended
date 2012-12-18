@@ -5,17 +5,27 @@ using UnityEditor;
 using System.Collections;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 public class LMExtendedWindow : EditorWindow
 {
+	const string assetFolderName = "Lightmapping Extended";
+	string presetsFolderPath;
+	
 	static LMExtendedWindow window;
 	private ILConfig config;
+//	private ILConfig lastPresetConfig;
 
 	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
 	static void Init ()
 	{
 		window = EditorWindow.GetWindow<LMExtendedWindow> (false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
+	}
+	
+	void OnEnable ()
+	{
+		presetsFolderPath = GetPresetsFolderPath ();
 	}
 	
 	public string ConfigFilePath {
@@ -123,6 +133,10 @@ public class LMExtendedWindow : EditorWindow
 		}
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
+		
+		if (GUI.changed) {
+			Debug.Log ("a");
+		}
 	}
 	
 	void SaveConfig ()
@@ -569,9 +583,6 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.Label ("Preset: ");
 		
 		currentPresetName = PresetsPopup (currentPresetName);
-//		if (config != GetPresetConfig (currentPresetName)) {
-//			currentPresetName = "Custom";
-//		}
 		
 		EditorGUILayout.BeginHorizontal ();
 		{
@@ -579,24 +590,30 @@ public class LMExtendedWindow : EditorWindow
 			if (currentPresetName == "Custom")
 				GUI.enabled = false;
 			if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (60))) {
-				// delete preset
+				DeletePreset (currentPresetName);
 			}
 			GUI.enabled = true;
 			
-			if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (60))) {
-				SavePreset ();
+			if (currentPresetName == "Custom") {
+				if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (60))) {
+					CreatePreset ();
+				}
+			} else {
+				if (GUILayout.Button ("Save", EditorStyles.miniButtonRight, GUILayout.Width (60))) {
+					SavePreset (currentPresetName);
+				}
 			}
 		}
 		EditorGUILayout.EndHorizontal ();
 		
 		if (GUI.changed && currentPresetName != "Custom") {
-			this.config = LoadPreset (currentPresetName);
+			LoadPreset (currentPresetName);
 		}
 		
 		GUILayout.EndHorizontal ();
 	}
 	
-	void SavePreset ()
+	void CreatePreset ()
 	{
 		var w = EditorWindow.GetWindow<LMExtendedWindow> ();
 		Rect pos = new Rect (w.position.x, w.position.y, w.position.width, 55);
@@ -675,7 +692,7 @@ public class LMExtendedWindow : EditorWindow
 	
 	private string PresetsPopup (string presetString)
 	{
-		List<string> presets = new List<string> (GetPresets ());
+		List<string> presets = new List<string> (GetPresetNames ());
 		int presetIndex = presets.IndexOf (presetString);
 		
 		// Include a "Custom" option at the beginning of the list
@@ -693,58 +710,60 @@ public class LMExtendedWindow : EditorWindow
 	
 	#region Presets
 	
-	string[] GetPresets ()
+	static string GetPresetsFolderPath ()
 	{
-		string[] presets = new string [0];
-		string presetsListString = EditorPrefs.GetString ("LMPresetsList");
-		if (presetsListString.Length != 0)
-			presets = presetsListString.Split (':');
-		for (int i = 0; i < presets.Length; i++) {
-			if (presets[i].StartsWith ("LMPreset-"))
-				presets[i] = presets[i].Substring (9);
+		string[] assets = AssetDatabase.GetAllAssetPaths ();
+		foreach (var a in assets) {
+			if (Path.GetFileName (a) == assetFolderName) {
+				if (Directory.Exists (a)) {
+					return a + "/Presets";
+				}
+			}
 		}
-		return presets;
+		return null;
 	}
 	
-	void SetPresets (string[] presetsList)
-	{	
-		var builder = new System.Text.StringBuilder ();
-		for (int i = 0; i < presetsList.Length; i++) {
-			builder.Append ("LMPreset-");
-			builder.Append (presetsList [i]);
-			if (i < presetsList.Length - 1)
-				builder.Append (":");
+	string[] GetPresetNames ()
+	{
+		if (Directory.Exists (presetsFolderPath)) {
+			string[] files = Directory.GetFiles (presetsFolderPath, "*.xml");
+			string[] presetNames = files.Select (s => s.Remove (0, presetsFolderPath.Length + 1).Replace (".xml", "")).ToArray ();
+			return presetNames;
+		} else {
+			return new string[0];
 		}
-		EditorPrefs.SetString ("LMPresetsList", builder.ToString ());
 	}
 	
-	void SavePreset (ILConfig config, string name)
+	public void SavePreset (string name)
 	{
-		string newPreset = name;
-		string configXml = config.SerializeToString ();
-		EditorPrefs.SetString (newPreset, configXml);
-		var presets = new List<string> (GetPresets ());
-		presets.Add (newPreset);
-		SetPresets (presets.ToArray ());
+		if (!Directory.Exists (presetsFolderPath)) {
+			Directory.CreateDirectory (presetsFolderPath);
+		}
+		this.config.SerializeToPath (GetPresetPath (name));
+		AssetDatabase.Refresh ();
+		currentPresetName = name;
 	}
 	
 	void DeletePreset (string name)
 	{
-		EditorPrefs.DeleteKey (name);
-		var presets = new List<string> (GetPresets ());
-		presets.Remove (name);
-		SetPresets (presets.ToArray ());
+		if (Directory.Exists (presetsFolderPath)) {
+			AssetDatabase.DeleteAsset (GetPresetPath (name));
+			currentPresetName = "Custom";
+		}
 	}
 	
-	ILConfig LoadPreset (string name)
+	void LoadPreset (string name)
 	{
-		string configString = EditorPrefs.GetString ("LMPreset-" + name);
-		return ILConfig.DeserializeFromString (configString);
+		// Load the preset config file
+		config = ILConfig.DeserializeFromPath (GetPresetPath (name));
+//		lastPresetConfig = ILConfig.DeserializeFromPath (GetPresetPath (name));
+		// Save preset data back out to our scene's config file
+		SaveConfig ();
 	}
 	
-	public void SaveOrCreatePreset (string name)
+	string GetPresetPath (string presetName)
 	{
-		SavePreset (this.config, name);
+		return presetsFolderPath + "/" + presetName + ".xml";
 	}
 	
 	#endregion

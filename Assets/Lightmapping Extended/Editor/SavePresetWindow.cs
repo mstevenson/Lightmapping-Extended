@@ -20,11 +20,11 @@ public class SavePresetWindow : EditorWindow
 			this.didFocus = true;
 			GUI.FocusControl ("name");
 		}
-		GUI.enabled = name.Length != 0;
+		GUI.enabled = name.Length != 0 && name != "Custom";
 		
 		if (GUILayout.Button ("Save") || enterKeyDown) {
 			Close ();
-			lmExtendedWindow.SaveOrCreatePreset (name);
+			lmExtendedWindow.SavePreset (name);
 			GUIUtility.ExitGUI ();
 		}
 	}
