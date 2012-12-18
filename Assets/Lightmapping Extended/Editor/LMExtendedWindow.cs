@@ -14,7 +14,7 @@ public class LMExtendedWindow : EditorWindow
 	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
 	static void Init ()
 	{
-		window = (LMExtendedWindow)EditorWindow.GetWindow (typeof(LMExtendedWindow), false, "LM Extended");
+		window = EditorWindow.GetWindow<LMExtendedWindow> (false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
 	}
 	
@@ -598,8 +598,10 @@ public class LMExtendedWindow : EditorWindow
 	
 	void SavePreset ()
 	{
-		Rect pos = new Rect (0, 0, 300, 100);
+		var w = EditorWindow.GetWindow<LMExtendedWindow> ();
+		Rect pos = new Rect (w.position.x, w.position.y, w.position.width, 55);
 		var window = EditorWindow.GetWindowWithRect<SavePresetWindow> (pos, true, "Save Preset", true);
+		window.position = pos;
 		window.lmExtendedWindow = this;
 	}
 	
