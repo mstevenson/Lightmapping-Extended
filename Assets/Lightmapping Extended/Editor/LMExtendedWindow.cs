@@ -254,8 +254,7 @@ public class LMExtendedWindow : EditorWindow
 	void GlobalIlluminationGUI ()
 	{
 		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
-		if (!config.giSettings.enableGI)
-			GUI.enabled = false;
+		EditorGUI.BeginDisabledGroup (!config.giSettings.enableGI);
 		
 		// Caustics are not available in Unity 4
 		//Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
@@ -282,7 +281,7 @@ public class LMExtendedWindow : EditorWindow
 				GUI.enabled = true;
 		}
 		
-		GUI.enabled = true;
+		EditorGUI.EndDisabledGroup ();
 	}
 
 	void IntegratorPopup (bool isPrimary)
@@ -442,11 +441,14 @@ public class LMExtendedWindow : EditorWindow
 	void EnvironmentGUI ()
 	{
 		config.environmentSettings.giEnvironment = (ILConfig.EnvironmentSettings.Environment)EditorGUILayout.EnumPopup ("Environment Type", config.environmentSettings.giEnvironment);
-		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None) {
-			GUI.enabled = false;
-		} else {
-			GUI.enabled = true;
-		}
+		
+		EditorGUI.BeginDisabledGroup (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None);
+		
+//		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None) {
+//			GUI.enabled = false;
+//		} else {
+//			GUI.enabled = true;
+//		}
 
 		EditorGUI.indentLevel++;
 
@@ -504,8 +506,7 @@ public class LMExtendedWindow : EditorWindow
 			else
 				EditorGUILayout.HelpBox ("The scene will be lit with Global Illumination using the IBL image as a simple environment.", MessageType.None);
 			
-			if (!config.environmentSettings.iblEmitLight)
-				GUI.enabled = false;
+			EditorGUI.BeginDisabledGroup (!config.environmentSettings.iblEmitLight);
 			{
 				IntField ("Samples", ref config.environmentSettings.iblSamples, "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting.");
 				FloatField ("IBL Intensity", ref config.environmentSettings.iblIntensity, "Sets the intensity of the lighting.");
@@ -531,13 +532,13 @@ public class LMExtendedWindow : EditorWindow
 				}
 				EditorGUI.indentLevel--;
 			}
-			GUI.enabled = true;
+			EditorGUI.EndDisabledGroup ();
 			
 			EditorGUILayout.Space ();
 		}
 		EditorGUI.indentLevel--;
 		
-		GUI.enabled = true;
+		EditorGUI.EndDisabledGroup ();
 	}
 	
 	void TextureBakeGUI ()
