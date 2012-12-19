@@ -217,6 +217,7 @@ public class LMExtendedWindow : EditorWindow
 				}
 				GUI.enabled = true;
 				if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (width))) {
+					SetPresetToDefault ();
 					CreatePreset ();
 				}
 			}
