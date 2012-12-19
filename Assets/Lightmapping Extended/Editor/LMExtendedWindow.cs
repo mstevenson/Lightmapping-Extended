@@ -1,5 +1,22 @@
 // Copyright (c) 2012 Michael Stevenson
-// Licensed under the MIT license
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of
+// this software and associated documentation files (the "Software"), to deal in the
+// Software without restriction, including without limitation the rights to use, copy,
+// modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+// and to permit persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all copies
+// or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+// PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+// HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+// CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+// OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 using UnityEngine;
 using UnityEditor;
 using UnityEditorInternal;
@@ -20,14 +37,12 @@ public class LMExtendedWindow : EditorWindow
 	const string assetFolderName = "Lightmapping Extended";
 	string presetsFolderPath;
 	
-	static LMExtendedWindow window;
 	private ILConfig config;
-//	private ILConfig lastPresetConfig;
 
 	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
 	static void Init ()
 	{
-		window = EditorWindow.GetWindow<LMExtendedWindow> (false, "LM Extended");
+		var window = EditorWindow.GetWindow<LMExtendedWindow> (false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
 	}
 	
@@ -75,6 +90,7 @@ public class LMExtendedWindow : EditorWindow
 		if (!haveConfigFile) {
 			EditorGUILayout.Space ();
 			if (GUILayout.Button ("Generate Beast settings file for current scene")) {
+				SetPresetToDefault ();
 				ILConfig newConfig = new ILConfig ();
 				var dir = Path.GetDirectoryName (ConfigFilePath);
 				if (!Directory.Exists (dir))
@@ -93,31 +109,36 @@ public class LMExtendedWindow : EditorWindow
 		
 		EditorGUILayout.Space ();
 		
-		
+		int lastSelected = selected;
 		selected = GUILayout.Toolbar (selected, new string[] {"Settings", "Global Illum", "Environment"});
+		// Prevent text fields from grabbing focus when switching tabs
+		if (selected != lastSelected) {
+			GUI.FocusControl ("");
+		}
+		
 		EditorGUILayout.Space ();
-
+		
 		scroll = EditorGUILayout.BeginScrollView (scroll);
-
-		switch (selected) {
-		case 0:
-			PerformanceSettingsGUI ();
-			TextureBakeGUI ();
-			AASettingsGUI ();
-			RenderSettingsGUI ();
-			break;
-		case 1:
-			GlobalIlluminationGUI ();
-			break;
-		case 2:
-			EnvironmentGUI ();
-			break;
+		{
+			switch (selected) {
+			case 0:
+				PerformanceSettingsGUI ();
+				TextureBakeGUI ();
+				AASettingsGUI ();
+				RenderSettingsGUI ();
+				break;
+			case 1:
+				GlobalIlluminationGUI ();
+				break;
+			case 2:
+				EnvironmentGUI ();
+				break;
+			}
+			
+			if (GUI.changed) {
+				SaveConfig ();
+			}
 		}
-		
-		if (GUI.changed) {
-			SaveConfig ();
-		}
-		
 		EditorGUILayout.EndScrollView ();
 		
 		EditorGUILayout.Space ();
@@ -127,6 +148,9 @@ public class LMExtendedWindow : EditorWindow
 		}
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
+		
+		// Use FocusControl to release focus from text fields when switching tabs
+		GUI.SetNextControlName ("");
 	}
 	
 	void SaveConfig ()
@@ -136,8 +160,10 @@ public class LMExtendedWindow : EditorWindow
 	
 	void OnSelectionChange ()
 	{
-		if (!File.Exists (ConfigFilePath))
+		if (!File.Exists (ConfigFilePath)) {
+			SetPresetToDefault ();
 			config = null;
+		}
 		Repaint ();
 	}
 
@@ -579,7 +605,7 @@ public class LMExtendedWindow : EditorWindow
 		{
 			int width = 42;
 			GUILayout.FlexibleSpace ();
-			if (currentPresetName == "Custom")
+			if (IsCurrentPresetDefault)
 				GUI.enabled = false;
 			if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (width))) {
 				if (EditorUtility.DisplayDialog ("Delete Preset", "Do you want to delete the lightmapping preset named \"" + currentPresetName + "\"?", "OK", "Cancel")) {
@@ -588,7 +614,7 @@ public class LMExtendedWindow : EditorWindow
 			}
 			GUI.enabled = true;
 			
-			if (currentPresetName == "Custom")
+			if (IsCurrentPresetDefault)
 				GUI.enabled = false;
 			if (GUILayout.Button ("Save", EditorStyles.miniButtonMid, GUILayout.Width (width))) {
 				SavePreset (currentPresetName);
@@ -600,7 +626,7 @@ public class LMExtendedWindow : EditorWindow
 		}
 		EditorGUILayout.EndHorizontal ();
 		
-		if (GUI.changed && currentPresetName != "Custom") {
+		if (GUI.changed && !IsCurrentPresetDefault) {
 			LoadPreset (currentPresetName);
 		}
 		
@@ -828,7 +854,7 @@ public class LMExtendedWindow : EditorWindow
 	{
 		if (Directory.Exists (presetsFolderPath)) {
 			AssetDatabase.DeleteAsset (GetPresetPath (name));
-			currentPresetName = "Custom";
+			SetPresetToDefault ();
 		}
 	}
 	
@@ -843,6 +869,17 @@ public class LMExtendedWindow : EditorWindow
 	string GetPresetPath (string presetName)
 	{
 		return presetsFolderPath + "/" + presetName + ".xml";
+	}
+	
+	void SetPresetToDefault ()
+	{
+		currentPresetName = "Custom";
+	}
+	
+	bool IsCurrentPresetDefault {
+		get {
+			return currentPresetName == "Custom";
+		}
 	}
 	
 	#endregion
