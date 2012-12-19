@@ -27,6 +27,12 @@ using System.IO;
 [System.Serializable]
 public class ILConfig
 {
+	public enum ShadowDepth
+	{
+		PrimaryRays = 1,
+		PrimaryAndSecondaryRays = 2
+	}
+	
 	#region Data types
 
 	[System.Serializable]

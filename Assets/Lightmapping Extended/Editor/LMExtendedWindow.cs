@@ -20,22 +20,15 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditorInternal;
-using System.Collections;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
 using System;
+using System.IO;
+using System.Linq;
+using System.Collections;
+using System.Collections.Generic;
 
 public class LMExtendedWindow : EditorWindow
 {
-	enum BakeMode {
-		BakeScene,
-		BakeSelected,
-		BakeProbes,
-	}
-	
 	const string assetFolderName = "Lightmapping Extended";
-	string presetsFolderPath;
 	
 	private ILConfig config;
 
@@ -46,10 +39,7 @@ public class LMExtendedWindow : EditorWindow
 		window.autoRepaintOnSceneChange = true;
 	}
 	
-	void OnEnable ()
-	{
-		presetsFolderPath = GetPresetsFolderPath ();
-	}
+	#region Configuration
 	
 	public string ConfigFilePath {
 		get {
@@ -63,7 +53,47 @@ public class LMExtendedWindow : EditorWindow
 		}
 	}
 	
-	private int selected;
+	void SaveConfig ()
+	{
+		config.SerializeToPath (ConfigFilePath);
+	}
+	
+	#endregion
+	
+	
+	#region Unity Events
+	
+	void OnEnable ()
+	{
+		presetsFolderPath = GetPresetsFolderPath ();
+	}
+	
+	void OnSelectionChange ()
+	{
+		if (!File.Exists (ConfigFilePath)) {
+			SetPresetToDefault ();
+			config = null;
+		}
+		Repaint ();
+	}
+
+	void OnFocus ()
+	{
+		if (!File.Exists (ConfigFilePath))
+			config = null;
+		Repaint ();
+	}
+
+	void OnProjectChange ()
+	{
+		if (!File.Exists (ConfigFilePath))
+			config = null;
+		Repaint ();
+	}
+	
+	
+	[SerializeField]
+	int toolbarSelected;
 	[SerializeField]
 	Vector2 scroll;
 
@@ -109,10 +139,10 @@ public class LMExtendedWindow : EditorWindow
 		
 		EditorGUILayout.Space ();
 		
-		int lastSelected = selected;
-		selected = GUILayout.Toolbar (selected, new string[] {"Settings", "Global Illum", "Environment"});
+		int lastSelected = toolbarSelected;
+		toolbarSelected = GUILayout.Toolbar (toolbarSelected, new string[] {"Settings", "Global Illum", "Environment"});
 		// Prevent text fields from grabbing focus when switching tabs
-		if (selected != lastSelected) {
+		if (toolbarSelected != lastSelected) {
 			GUI.FocusControl ("");
 		}
 		
@@ -120,7 +150,7 @@ public class LMExtendedWindow : EditorWindow
 		
 		scroll = EditorGUILayout.BeginScrollView (scroll);
 		{
-			switch (selected) {
+			switch (toolbarSelected) {
 			case 0:
 				PerformanceSettingsGUI ();
 				TextureBakeGUI ();
@@ -144,7 +174,7 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUILayout.Space ();
 		GUILayout.BeginHorizontal ();
 		{
-			Buttons ();
+			BakeButtonsGUI ();
 		}
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
@@ -153,41 +183,148 @@ public class LMExtendedWindow : EditorWindow
 		GUI.SetNextControlName ("");
 	}
 	
-	void SaveConfig ()
-	{
-		config.SerializeToPath (ConfigFilePath);
-	}
+	#endregion
 	
-	void OnSelectionChange ()
+	
+	#region Presets
+	
+	string presetsFolderPath;
+	string currentPresetName = "";
+	
+	void PresetSelectionGUI ()
 	{
-		if (!File.Exists (ConfigFilePath)) {
-			SetPresetToDefault ();
-			config = null;
+		GUILayout.BeginHorizontal ();
+		{
+			GUILayout.Label ("Preset: ");
+			currentPresetName = PresetsPopup (currentPresetName);
+			EditorGUILayout.BeginHorizontal ();
+			{
+				int width = 42;
+				GUILayout.FlexibleSpace ();
+				if (IsCurrentPresetDefault)
+					GUI.enabled = false;
+				if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (width))) {
+					if (EditorUtility.DisplayDialog ("Delete Preset", "Do you want to delete the lightmapping preset named \"" + currentPresetName + "\"?", "OK", "Cancel")) {
+						DeletePreset (currentPresetName);
+					}
+				}
+				GUI.enabled = true;
+				
+				if (IsCurrentPresetDefault)
+					GUI.enabled = false;
+				if (GUILayout.Button ("Save", EditorStyles.miniButtonMid, GUILayout.Width (width))) {
+					SavePreset (currentPresetName);
+				}
+				GUI.enabled = true;
+				if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (width))) {
+					CreatePreset ();
+				}
+			}
+			EditorGUILayout.EndHorizontal ();
+			if (GUI.changed && !IsCurrentPresetDefault) {
+				LoadPreset (currentPresetName);
+			}
 		}
-		Repaint ();
-	}
-
-	void OnFocus ()
-	{
-		if (!File.Exists (ConfigFilePath))
-			config = null;
-		Repaint ();
-	}
-
-	void OnProjectChange ()
-	{
-		if (!File.Exists (ConfigFilePath))
-			config = null;
-		Repaint ();
+		GUILayout.EndHorizontal ();
 	}
 	
-
-	public enum ShadowDepth
+	private string PresetsPopup (string presetString)
 	{
-		PrimaryRays = 1,
-		PrimaryAndSecondaryRays = 2
+		List<string> presets = new List<string> (GetPresetNames ());
+		int presetIndex = presets.IndexOf (presetString);
+		
+		// Include a "Custom" option at the beginning of the list
+		presets.Insert (0, "Custom");
+		// Shift the indexes forward to account for the new "Custom" option
+		presetIndex++;
+		
+		presetIndex = EditorGUILayout.Popup (presetIndex, presets.ToArray ());
+		string newPresetName = presets [presetIndex];
+		return newPresetName;
 	}
-
+	
+	void CreatePreset ()
+	{
+		var w = EditorWindow.GetWindow<LMExtendedWindow> ();
+		Rect pos = new Rect (w.position.x, w.position.y, w.position.width, 55);
+		var window = EditorWindow.GetWindowWithRect<SavePresetWindow> (pos, true, "Create Lightmapping Preset", true);
+		window.position = pos;
+		window.lmExtendedWindow = this;
+	}
+	
+	static string GetPresetsFolderPath ()
+	{
+		string[] assets = AssetDatabase.GetAllAssetPaths ();
+		foreach (var a in assets) {
+			if (Path.GetFileName (a) == assetFolderName) {
+				if (Directory.Exists (a)) {
+					return a + "/Presets";
+				}
+			}
+		}
+		return null;
+	}
+	
+	string[] GetPresetNames ()
+	{
+		if (Directory.Exists (presetsFolderPath)) {
+			string[] files = Directory.GetFiles (presetsFolderPath, "*.xml", SearchOption.AllDirectories);
+			string[] presetNames = files.Select (s => s.Remove (0, presetsFolderPath.Length + 1).Replace (".xml", "")).ToArray ();
+			return presetNames;
+		} else {
+			return new string[0];
+		}
+	}
+	
+	public void SavePreset (string name)
+	{
+		var dir = presetsFolderPath + "/" + Path.GetDirectoryName (name);
+		if (!Directory.Exists (dir)) {
+			Debug.Log ("Create " + dir);
+			Directory.CreateDirectory (dir);
+		}
+		this.config.SerializeToPath (GetPresetPath (name));
+		AssetDatabase.Refresh ();
+		currentPresetName = name;
+	}
+	
+	void DeletePreset (string name)
+	{
+		if (Directory.Exists (presetsFolderPath)) {
+			AssetDatabase.DeleteAsset (GetPresetPath (name));
+			SetPresetToDefault ();
+		}
+	}
+	
+	void LoadPreset (string name)
+	{
+		// Load the preset config file
+		config = ILConfig.DeserializeFromPath (GetPresetPath (name));
+		// Save preset data back out to our scene's config file
+		SaveConfig ();
+	}
+	
+	string GetPresetPath (string presetName)
+	{
+		return presetsFolderPath + "/" + presetName + ".xml";
+	}
+	
+	void SetPresetToDefault ()
+	{
+		currentPresetName = "Custom";
+	}
+	
+	bool IsCurrentPresetDefault {
+		get {
+			return currentPresetName == "Custom";
+		}
+	}
+	
+	#endregion
+	
+	
+	#region Settings
+	
 	void PerformanceSettingsGUI ()
 	{
 		// Threads
@@ -205,7 +342,9 @@ public class LMExtendedWindow : EditorWindow
 		GUI.enabled = true;
 		EditorGUI.indentLevel--;
 		EditorGUI.indentLevel--;
-
+		
+		// The following options are not useful unless using Beast's own UI. This UI is accessible if Unity's embedded Beast tool is called
+		
 //		GUILayout.Label ("Tiles", EditorStyles.boldLabel);
 //		EditorGUI.indentLevel++;
 //		config.frameSettings.tileScheme = (ILConfig.FrameSettings.TileScheme)EditorGUILayout.EnumPopup (new GUIContent ("Tile Scheme", "Different ways for Beast to distribute tiles over the image plane."), config.frameSettings.tileScheme);
@@ -261,7 +400,7 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Shadows", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		config.renderSettings.shadowDepth = (int)((ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ShadowDepth)System.Enum.Parse (typeof(ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
+		config.renderSettings.shadowDepth = (int)((ILConfig.ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ILConfig.ShadowDepth)System.Enum.Parse (typeof(ILConfig.ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
 		IntField ("Min Shadow Rays", ref config.renderSettings.minShadowRays, "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays.");
 		IntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
 		EditorGUI.indentLevel--;
@@ -282,8 +421,8 @@ public class LMExtendedWindow : EditorWindow
 		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
 		EditorGUI.BeginDisabledGroup (!config.giSettings.enableGI);
 		
-		// Caustics are not available in Unity 4
-		//Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
+		// Caustics have no effect as of Unity 4.0
+//		Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
 
 		EditorGUILayout.Space ();
 
@@ -401,7 +540,7 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Ambient Occlusion", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		// Not used by Unity
+		// Visualize AO is not available as of Unity 4.0
 //		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
 		Slider ("Influence", ref config.giSettings.fgAOInfluence, 0, 1, "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution.");
 		LightmapEditorSettings.aoAmount = config.giSettings.fgAOInfluence;
@@ -432,7 +571,7 @@ public class LMExtendedWindow : EditorWindow
 
 		IntSlider ("Bounces", ref config.giSettings.ptDepth, 0, 20, "");
 		FloatField ("Accuracy", ref config.giSettings.ptAccuracy, "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality.");
-		// Not certain what this does
+		// ptDefaultColor has no apparent effect as of Unity 4.0
 //		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
 
 		// Points
@@ -469,12 +608,6 @@ public class LMExtendedWindow : EditorWindow
 		config.environmentSettings.giEnvironment = (ILConfig.EnvironmentSettings.Environment)EditorGUILayout.EnumPopup ("Environment Type", config.environmentSettings.giEnvironment);
 		
 		EditorGUI.BeginDisabledGroup (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None);
-		
-//		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None) {
-//			GUI.enabled = false;
-//		} else {
-//			GUI.enabled = true;
-//		}
 
 		EditorGUI.indentLevel++;
 
@@ -572,18 +705,18 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.Label ("Texture", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		
-		// FIXME The following have no effect in Unity 4.0:
+		// The following have no effect as of Unity 4.0
 		
-		//LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "");
-		//IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
-		//Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
-		//EditorGUI.indentLevel++;
-		//if (!config.frameSettings.premultiply) {
-		//	GUI.enabled = false;
-		//}
-		//FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
-		//EditorGUI.indentLevel--;
-		//GUI.enabled = true;
+//		LMColorPicker ("Background Color", ref config.textureBakeSettings.bgColor, "");
+//		IntField ("Edge Dilation", ref config.textureBakeSettings.edgeDilation, "Expands the lightmap with the number of pixels specified to avoid black borders.");
+//		Toggle ("Premultiply", ref config.frameSettings.premultiply, "If this box is checked the alpha channel value is pre multiplied into the color channel of the pixel. Note that disabling premultiply alpha gives poor result if used with environment maps and other non constant camera backgrounds. Disabling premultiply alpha can be convenient when composing images in post.");
+//		EditorGUI.indentLevel++;
+//		if (!config.frameSettings.premultiply) {
+//			GUI.enabled = false;
+//		}
+//		FloatField ("Premultiply Threshold", ref config.frameSettings.premultiplyThreshold, "This is the alpha threshold for pixels to be considered opaque enough to be 'un multiplied' when using premultiply alpha.");
+//		EditorGUI.indentLevel--;
+//		GUI.enabled = true;
 		
 		Toggle ("Bilinear Filter", ref config.textureBakeSettings.bilinearFilter, "Counteract unwanted light seams for tightly packed UV patches.");
 		Toggle ("Conservative Rasterization", ref config.textureBakeSettings.conservativeRasterization, "Find pixels which are only partially covered by the UV map.");
@@ -591,76 +724,19 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.indentLevel--;
 	}
 	
-	string currentPresetName = "";
+	#endregion
 	
-	void PresetSelectionGUI ()
+	
+	#region Bake
+	
+	enum BakeMode
 	{
-		GUILayout.BeginHorizontal ();
-		
-		GUILayout.Label ("Preset: ");
-		
-		currentPresetName = PresetsPopup (currentPresetName);
-		
-		EditorGUILayout.BeginHorizontal ();
-		{
-			int width = 42;
-			GUILayout.FlexibleSpace ();
-			if (IsCurrentPresetDefault)
-				GUI.enabled = false;
-			if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (width))) {
-				if (EditorUtility.DisplayDialog ("Delete Preset", "Do you want to delete the lightmapping preset named \"" + currentPresetName + "\"?", "OK", "Cancel")) {
-					DeletePreset (currentPresetName);
-				}
-			}
-			GUI.enabled = true;
-			
-			if (IsCurrentPresetDefault)
-				GUI.enabled = false;
-			if (GUILayout.Button ("Save", EditorStyles.miniButtonMid, GUILayout.Width (width))) {
-				SavePreset (currentPresetName);
-			}
-			GUI.enabled = true;
-			if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (width))) {
-				CreatePreset ();
-			}
-		}
-		EditorGUILayout.EndHorizontal ();
-		
-		if (GUI.changed && !IsCurrentPresetDefault) {
-			LoadPreset (currentPresetName);
-		}
-		
-		GUILayout.EndHorizontal ();
+		BakeScene,
+		BakeSelected,
+		BakeProbes,
 	}
 	
-	void CreatePreset ()
-	{
-		var w = EditorWindow.GetWindow<LMExtendedWindow> ();
-		Rect pos = new Rect (w.position.x, w.position.y, w.position.width, 55);
-		var window = EditorWindow.GetWindowWithRect<SavePresetWindow> (pos, true, "Create Lightmapping Preset", true);
-		window.position = pos;
-		window.lmExtendedWindow = this;
-	}
-	
-	bool CheckSettingsIntegrity ()
-	{
-		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
-			if (string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
-				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but no IBL image file is available. Either change the environment type or specify an HDR or EXR image file path.", "Ok");
-				Debug.LogError ("Lightmapping cancelled, environment type set to IBL but no IBL image file was specified.");
-				return false;
-			} else if (!File.Exists (config.environmentSettings.iblImageFile)) {
-				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but there is no compatible image file at the specified path. Either change the environment type or specify an absolute path to an HDR or EXR image file.", "Ok");
-				Debug.LogError ("Lightmapping cancelled, environment type set to IBL but the absolute path to an IBL image is incorrect.");
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	#region Bake Mode Selection
-	
-	void Buttons ()
+	void BakeButtonsGUI ()
 	{
 		float width = 120;
 		bool disabled = LightmapSettings.lightmapsMode == LightmapsMode.Directional && !InternalEditorUtility.HasPro ();
@@ -741,8 +817,25 @@ public class LMExtendedWindow : EditorWindow
 		}
 	}
 	
+	bool CheckSettingsIntegrity ()
+	{
+		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
+			if (string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
+				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but no IBL image file is available. Either change the environment type or specify an HDR or EXR image file path.", "Ok");
+				Debug.LogError ("Lightmapping cancelled, environment type set to IBL but no IBL image file was specified.");
+				return false;
+			} else if (!File.Exists (config.environmentSettings.iblImageFile)) {
+				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but there is no compatible image file at the specified path. Either change the environment type or specify an absolute path to an HDR or EXR image file.", "Ok");
+				Debug.LogError ("Lightmapping cancelled, environment type set to IBL but the absolute path to an IBL image is incorrect.");
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	#endregion
-
+	
+	
 	#region GUI Elements
 	
 	private void LMColorPicker (string name, ref ILConfig.LMColor color, string tooltip)
@@ -792,94 +885,6 @@ public class LMExtendedWindow : EditorWindow
 		if (max < min)
 			min = max;
 		GUILayout.EndHorizontal ();
-	}
-	
-	private string PresetsPopup (string presetString)
-	{
-		List<string> presets = new List<string> (GetPresetNames ());
-		int presetIndex = presets.IndexOf (presetString);
-		
-		// Include a "Custom" option at the beginning of the list
-		presets.Insert (0, "Custom");
-		// Shift the indexes forward to account for the new "Custom" option
-		presetIndex++;
-		
-		presetIndex = EditorGUILayout.Popup (presetIndex, presets.ToArray ());
-		string newPresetName = presets [presetIndex];
-		return newPresetName;
-	}
-	
-	#endregion
-	
-	
-	#region Presets Management
-	
-	static string GetPresetsFolderPath ()
-	{
-		string[] assets = AssetDatabase.GetAllAssetPaths ();
-		foreach (var a in assets) {
-			if (Path.GetFileName (a) == assetFolderName) {
-				if (Directory.Exists (a)) {
-					return a + "/Presets";
-				}
-			}
-		}
-		return null;
-	}
-	
-	string[] GetPresetNames ()
-	{
-		if (Directory.Exists (presetsFolderPath)) {
-			string[] files = Directory.GetFiles (presetsFolderPath, "*.xml", SearchOption.AllDirectories);
-			string[] presetNames = files.Select (s => s.Remove (0, presetsFolderPath.Length + 1).Replace (".xml", "")).ToArray ();
-			return presetNames;
-		} else {
-			return new string[0];
-		}
-	}
-	
-	public void SavePreset (string name)
-	{
-		var dir = presetsFolderPath + "/" + Path.GetDirectoryName (name);
-		if (!Directory.Exists (dir)) {
-			Debug.Log ("Create " + dir);
-			Directory.CreateDirectory (dir);
-		}
-		this.config.SerializeToPath (GetPresetPath (name));
-		AssetDatabase.Refresh ();
-		currentPresetName = name;
-	}
-	
-	void DeletePreset (string name)
-	{
-		if (Directory.Exists (presetsFolderPath)) {
-			AssetDatabase.DeleteAsset (GetPresetPath (name));
-			SetPresetToDefault ();
-		}
-	}
-	
-	void LoadPreset (string name)
-	{
-		// Load the preset config file
-		config = ILConfig.DeserializeFromPath (GetPresetPath (name));
-		// Save preset data back out to our scene's config file
-		SaveConfig ();
-	}
-	
-	string GetPresetPath (string presetName)
-	{
-		return presetsFolderPath + "/" + presetName + ".xml";
-	}
-	
-	void SetPresetToDefault ()
-	{
-		currentPresetName = "Custom";
-	}
-	
-	bool IsCurrentPresetDefault {
-		get {
-			return currentPresetName == "Custom";
-		}
 	}
 	
 	#endregion
