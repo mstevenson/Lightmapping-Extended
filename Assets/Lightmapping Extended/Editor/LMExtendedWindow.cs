@@ -124,22 +124,6 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.BeginHorizontal ();
 		{
 			Buttons ();
-//			GUILayout.FlexibleSpace ();
-//			if (GUILayout.Button ("Clear", GUILayout.Width (120))) {
-//				Lightmapping.Clear ();
-//			}
-//			if (Lightmapping.isRunning) {
-//				if (GUILayout.Button ("Cancel", GUILayout.Width (120))) {
-//					Lightmapping.Cancel ();
-//				}
-//			} else {
-//				if (BakeButton ()) {
-//					if (CheckSettingsIntegrity ()) {
-//						DoBake ();
-//						GUIUtility.ExitGUI ();
-//					}
-//				}
-//			}
 		}
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
@@ -677,18 +661,20 @@ public class LMExtendedWindow : EditorWindow
 	private bool BakeButton (params GUILayoutOption[] options)
 	{
 		GUIContent content = new GUIContent (ObjectNames.NicifyVariableName (bakeMode.ToString ()));
-		Rect rect = GUILayoutUtility.GetRect (content, (GUIStyle)"DropDownButton", options);
-		rect.xMin = rect.xMax - 20;
-		if (Event.current.type != EventType.MouseDown || !rect.Contains (Event.current.mousePosition))
-			return GUI.Button (rect, content, (GUIStyle)"DropDownButton");
+		
+		Rect dropdownRect = GUILayoutUtility.GetRect (content, (GUIStyle)"DropDownButton", options);
+		Rect buttonRect = dropdownRect;
+		buttonRect.xMin = buttonRect.xMax - 20;
+		if (Event.current.type != EventType.MouseDown || !buttonRect.Contains (Event.current.mousePosition))
+			return GUI.Button (dropdownRect, content, (GUIStyle)"DropDownButton");
 		GenericMenu genericMenu = new GenericMenu ();
 		string[] names = Enum.GetNames (typeof(BakeMode));
 		int num1 = Array.IndexOf<string> (names, Enum.GetName (typeof(BakeMode), this.bakeMode));
 		int num2 = 0;
 		foreach (string text in Enumerable.Select<string, string> (names, x => ObjectNames.NicifyVariableName(x))) {
-			genericMenu.AddItem (new GUIContent (text), num2 == num1, new GenericMenu.MenuFunction2 (this.BakeDropDownCallback), (object)num2++);
+			genericMenu.AddItem (new GUIContent (text), num2 == num1, new GenericMenu.MenuFunction2 (this.BakeDropDownCallback), num2++);
 		}
-		genericMenu.DropDown (rect);
+		genericMenu.DropDown (dropdownRect);
 		Event.current.Use ();
 		return false;
 	}
