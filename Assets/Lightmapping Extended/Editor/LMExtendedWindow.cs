@@ -699,7 +699,6 @@ public class LMExtendedWindow : EditorWindow
 	
 	void DoBake ()
 	{
-		LightmapsMode lightmapsMode = LightmapSettings.lightmapsMode;
 		switch (bakeMode) {
 		case BakeMode.BakeScene:
 			Lightmapping.BakeAsync ();
