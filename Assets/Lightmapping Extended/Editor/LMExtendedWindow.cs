@@ -2,13 +2,21 @@
 // Licensed under the MIT license
 using UnityEngine;
 using UnityEditor;
+using UnityEditorInternal;
 using System.Collections;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 public class LMExtendedWindow : EditorWindow
 {
+	enum BakeMode {
+		BakeScene,
+		BakeSelected,
+		BakeProbes,
+	}
+	
 	const string assetFolderName = "Lightmapping Extended";
 	string presetsFolderPath;
 	
@@ -115,21 +123,23 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUILayout.Space ();
 		GUILayout.BeginHorizontal ();
 		{
-			GUILayout.FlexibleSpace ();
-			if (GUILayout.Button ("Clear", GUILayout.Width (120))) {
-				Lightmapping.Clear ();
-			}
-			if (Lightmapping.isRunning) {
-				if (GUILayout.Button ("Cancel", GUILayout.Width (120))) {
-					Lightmapping.Cancel ();
-				}
-			} else {
-				if (GUILayout.Button ("Bake Scene", GUILayout.Width (120))) {
-					if (CheckSettingsIntegrity ()) {
-						Lightmapping.BakeAsync ();
-					}
-				}
-			}
+			Buttons ();
+//			GUILayout.FlexibleSpace ();
+//			if (GUILayout.Button ("Clear", GUILayout.Width (120))) {
+//				Lightmapping.Clear ();
+//			}
+//			if (Lightmapping.isRunning) {
+//				if (GUILayout.Button ("Cancel", GUILayout.Width (120))) {
+//					Lightmapping.Cancel ();
+//				}
+//			} else {
+//				if (BakeButton ()) {
+//					if (CheckSettingsIntegrity ()) {
+//						DoBake ();
+//						GUIUtility.ExitGUI ();
+//					}
+//				}
+//			}
 		}
 		GUILayout.EndHorizontal ();
 		EditorGUILayout.Space ();
@@ -634,6 +644,89 @@ public class LMExtendedWindow : EditorWindow
 		return true;
 	}
 	
+	#region Bake Mode Selection
+	
+	void Buttons ()
+	{
+		float width = 120;
+		bool disabled = LightmapSettings.lightmapsMode == LightmapsMode.Directional && !InternalEditorUtility.HasPro ();
+		EditorGUI.BeginDisabledGroup (disabled);
+		{
+			GUILayout.BeginHorizontal ();
+			{
+				GUILayout.FlexibleSpace ();
+				if (GUILayout.Button ("Clear", GUILayout.Width (width))) {
+					Lightmapping.Clear ();
+				}
+				if (!Lightmapping.isRunning) {
+					if (BakeButton (GUILayout.Width (width))) {
+						this.DoBake ();
+						GUIUtility.ExitGUI ();
+					}
+				} else {
+					if (GUILayout.Button ("Cancel", GUILayout.Width (width))) {
+						Lightmapping.Cancel ();
+					}
+				}
+			}
+			GUILayout.EndHorizontal ();
+		}
+		EditorGUI.EndDisabledGroup ();
+	}
+	
+	private bool BakeButton (params GUILayoutOption[] options)
+	{
+		GUIContent content = new GUIContent (ObjectNames.NicifyVariableName (bakeMode.ToString ()));
+		Rect rect = GUILayoutUtility.GetRect (content, (GUIStyle)"DropDownButton", options);
+		rect.xMin = rect.xMax - 20;
+		if (Event.current.type != EventType.MouseDown || !rect.Contains (Event.current.mousePosition))
+			return GUI.Button (rect, content, (GUIStyle)"DropDownButton");
+		GenericMenu genericMenu = new GenericMenu ();
+		string[] names = Enum.GetNames (typeof(BakeMode));
+		int num1 = Array.IndexOf<string> (names, Enum.GetName (typeof(BakeMode), this.bakeMode));
+		int num2 = 0;
+		foreach (string text in Enumerable.Select<string, string> (names, x => ObjectNames.NicifyVariableName(x))) {
+			genericMenu.AddItem (new GUIContent (text), num2 == num1, new GenericMenu.MenuFunction2 (this.BakeDropDownCallback), (object)num2++);
+		}
+		genericMenu.DropDown (rect);
+		Event.current.Use ();
+		return false;
+	}
+	
+	void BakeDropDownCallback (object data)
+	{
+		if (CheckSettingsIntegrity ()) {	
+			bakeMode = (BakeMode)data;
+			DoBake ();
+		}
+	}
+	
+	BakeMode bakeMode {
+		get {
+			return (BakeMode)EditorPrefs.GetInt ("LightmapEditor.BakeMode", 0);
+		}
+		set {
+			EditorPrefs.SetInt ("LightmapEditor.BakeMode", (int)value);
+		}
+	}
+	
+	void DoBake ()
+	{
+		LightmapsMode lightmapsMode = LightmapSettings.lightmapsMode;
+		switch (bakeMode) {
+		case BakeMode.BakeScene:
+			Lightmapping.BakeAsync ();
+			break;
+		case BakeMode.BakeSelected:
+			Lightmapping.BakeSelectedAsync ();
+			break;
+		case BakeMode.BakeProbes:
+			Lightmapping.BakeLightProbesOnlyAsync ();
+			break;
+		}
+	}
+	
+	#endregion
 
 	#region GUI Elements
 	
@@ -704,7 +797,7 @@ public class LMExtendedWindow : EditorWindow
 	#endregion
 	
 	
-	#region Presets
+	#region Presets Management
 	
 	static string GetPresetsFolderPath ()
 	{
@@ -754,7 +847,6 @@ public class LMExtendedWindow : EditorWindow
 	{
 		// Load the preset config file
 		config = ILConfig.DeserializeFromPath (GetPresetPath (name));
-//		lastPresetConfig = ILConfig.DeserializeFromPath (GetPresetPath (name));
 		// Save preset data back out to our scene's config file
 		SaveConfig ();
 	}
@@ -765,5 +857,7 @@ public class LMExtendedWindow : EditorWindow
 	}
 	
 	#endregion
+	
 }
+
 
