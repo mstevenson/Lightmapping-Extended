@@ -577,22 +577,25 @@ public class LMExtendedWindow : EditorWindow
 		
 		EditorGUILayout.BeginHorizontal ();
 		{
+			int width = 42;
 			GUILayout.FlexibleSpace ();
 			if (currentPresetName == "Custom")
 				GUI.enabled = false;
-			if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (60))) {
-				DeletePreset (currentPresetName);
+			if (GUILayout.Button ("Delete", EditorStyles.miniButtonLeft, GUILayout.Width (width))) {
+				if (EditorUtility.DisplayDialog ("Delete Preset", "Do you want to delete the lightmapping preset named \"" + currentPresetName + "\"?", "OK", "Cancel")) {
+					DeletePreset (currentPresetName);
+				}
 			}
 			GUI.enabled = true;
 			
-			if (currentPresetName == "Custom") {
-				if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (60))) {
-					CreatePreset ();
-				}
-			} else {
-				if (GUILayout.Button ("Save", EditorStyles.miniButtonRight, GUILayout.Width (60))) {
-					SavePreset (currentPresetName);
-				}
+			if (currentPresetName == "Custom")
+				GUI.enabled = false;
+			if (GUILayout.Button ("Save", EditorStyles.miniButtonMid, GUILayout.Width (width))) {
+				SavePreset (currentPresetName);
+			}
+			GUI.enabled = true;
+			if (GUILayout.Button ("Create", EditorStyles.miniButtonRight, GUILayout.Width (width))) {
+				CreatePreset ();
 			}
 		}
 		EditorGUILayout.EndHorizontal ();
@@ -608,7 +611,7 @@ public class LMExtendedWindow : EditorWindow
 	{
 		var w = EditorWindow.GetWindow<LMExtendedWindow> ();
 		Rect pos = new Rect (w.position.x, w.position.y, w.position.width, 55);
-		var window = EditorWindow.GetWindowWithRect<SavePresetWindow> (pos, true, "Save Preset", true);
+		var window = EditorWindow.GetWindowWithRect<SavePresetWindow> (pos, true, "Create Lightmapping Preset", true);
 		window.position = pos;
 		window.lmExtendedWindow = this;
 	}
