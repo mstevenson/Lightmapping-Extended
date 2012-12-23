@@ -147,28 +147,32 @@ public class LMExtendedWindow : EditorWindow
 		}
 		
 		EditorGUILayout.Space ();
-		
+
 		scroll = EditorGUILayout.BeginScrollView (scroll);
 		{
+			SerializedObject serializedConfig = new SerializedObject (config);
 			switch (toolbarSelected) {
 			case 0:
-				PerformanceSettingsGUI ();
-				TextureBakeGUI ();
-				AASettingsGUI ();
-				RenderSettingsGUI ();
+				PerformanceSettingsGUI (serializedConfig);
+				TextureBakeGUI (serializedConfig);
+				AASettingsGUI (serializedConfig);
+				RenderSettingsGUI (serializedConfig);
 				break;
 			case 1:
-				GlobalIlluminationGUI ();
+				GlobalIlluminationGUI (serializedConfig);
 				break;
 			case 2:
-				EnvironmentGUI ();
+				EnvironmentGUI (serializedConfig);
 				break;
 			}
+
+			serializedConfig.ApplyModifiedProperties ();
 			
 			if (GUI.changed) {
 				SaveConfig ();
 			}
 		}
+		
 		EditorGUILayout.EndScrollView ();
 		
 		EditorGUILayout.Space ();
@@ -326,20 +330,24 @@ public class LMExtendedWindow : EditorWindow
 	
 	#region Settings
 	
-	void PerformanceSettingsGUI ()
+	void PerformanceSettingsGUI (SerializedObject serializedConfig)
 	{
+		SerializedProperty autoThreads = serializedConfig.FindProperty ("frameSettings.autoThreads");
+		SerializedProperty autoThreadsSubtract = serializedConfig.FindProperty ("frameSettings.autoThreadsSubtract");
+		SerializedProperty renderThreads = serializedConfig.FindProperty ("frameSettings.renderThreads");
+		
 		// Threads
 		GUILayout.Label ("CPU", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		Toggle ("Auto Threads", ref config.frameSettings.autoThreads, "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core.");
+		EditorGUILayout.PropertyField (autoThreads, new GUIContent ("Auto Threads", "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core."));
 		EditorGUI.indentLevel++;
 		if (!config.frameSettings.autoThreads)
 			GUI.enabled = false;
-		IntField ("Subtract Threads", ref config.frameSettings.autoThreadsSubtract, "If autoThreads is enabled, this can be used to decrease the number of utilized cores, e.g. to leave one or two cores free to do other work.");
+		EditorGUILayout.PropertyField (autoThreadsSubtract, new GUIContent ("Subtract Threads", "If autoThreads is enabled, this can be used to decrease the number of utilized cores, e.g. to leave one or two cores free to do other work."));
 		GUI.enabled = true;
 		if (config.frameSettings.autoThreads)
 			GUI.enabled = false;
-		IntField ("Render Threads", ref config.frameSettings.renderThreads, "If autoThreads is disabled, this will set the number of threads beast uses. One per core is a good start.");
+		EditorGUILayout.PropertyField (renderThreads, new GUIContent ("Render Threads", "If autoThreads is disabled, this will set the number of threads beast uses. One per core is a good start."));
 		GUI.enabled = true;
 		EditorGUI.indentLevel--;
 		EditorGUI.indentLevel--;
@@ -365,60 +373,90 @@ public class LMExtendedWindow : EditorWindow
 //		EditorGUI.indentLevel--;
 	}
 	
-	void AASettingsGUI ()
+	void AASettingsGUI (SerializedObject serializedConfig)
 	{
+		SerializedProperty samplingMode = serializedConfig.FindProperty ("aaSettings.samplingMode");
+		SerializedProperty minSampleRate = serializedConfig.FindProperty ("aaSettings.minSampleRate");
+		SerializedProperty maxSampleRate = serializedConfig.FindProperty ("aaSettings.maxSampleRate");
+		SerializedProperty contrast = serializedConfig.FindProperty ("aaSettings.contrast");
+		SerializedProperty filter = serializedConfig.FindProperty ("aaSettings.filter");
+		SerializedProperty filterSizeX = serializedConfig.FindProperty ("aaSettings.filterSize.x");
+		SerializedProperty filterSizeY = serializedConfig.FindProperty ("aaSettings.filterSize.y");
+		
 		GUILayout.Label ("Antialiasing", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		config.aaSettings.samplingMode = (ILConfig.AASettings.SamplingMode)EditorGUILayout.EnumPopup (new GUIContent ("Sampling Mode", ""), config.aaSettings.samplingMode);
+		EditorGUILayout.PropertyField (samplingMode, new GUIContent ("Sampling Mode", ""));
 		EditorGUI.indentLevel++;
-		IntField ("Min Sample Rate", ref config.aaSettings.minSampleRate, "Controls the minimum number of samples per pixel. The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)");
-		IntField ("Max Sample Rate", ref config.aaSettings.maxSampleRate, "Controls the maximum number of samples per pixel. Values less than 0 allows using less than one sample per pixel (if AdaptiveSampling is used). The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)");
+		EditorGUILayout.PropertyField (minSampleRate, new GUIContent ("Min Sample Rate", "Controls the minimum number of samples per pixel. The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)"));
+		EditorGUILayout.PropertyField (maxSampleRate, new GUIContent ("Max Sample Rate", "Controls the maximum number of samples per pixel. Values less than 0 allows using less than one sample per pixel (if AdaptiveSampling is used). The formula used is 4^maxSampleRate (1, 4, 16, 64, 256 samples per pixel)"));
 		EditorGUI.indentLevel--;
-		FloatField ("Contrast", ref config.aaSettings.contrast, "If the contrast differs less than this threshold Beast will consider the sampling good enough. Default value is 0.1.");
-		config.aaSettings.filter = (ILConfig.AASettings.Filter)EditorGUILayout.EnumPopup (new GUIContent ("Filter", "The sub-pixel filter to use."), config.aaSettings.filter);
+		EditorGUILayout.PropertyField (contrast, new GUIContent ("Contrast", "If the contrast differs less than this threshold Beast will consider the sampling good enough. Default value is 0.1."));
+		EditorGUILayout.PropertyField (filter, new GUIContent ("Filter", "The sub-pixel filter to use."));
 		EditorGUILayout.PrefixLabel (new GUIContent ("Filter Size"));
 		EditorGUI.indentLevel++;
-		FloatField ("X", ref config.aaSettings.filterSize.x, "");
-		FloatField ("Y", ref config.aaSettings.filterSize.y, "");
+		EditorGUILayout.PropertyField (filterSizeX, new GUIContent ("X", ""));
+		EditorGUILayout.PropertyField (filterSizeY, new GUIContent ("Y", ""));
 		EditorGUI.indentLevel--;
 		EditorGUI.indentLevel--;
 	}
 	
-	void RenderSettingsGUI ()
+	void RenderSettingsGUI (SerializedObject serializedConfig)
 	{
+		SerializedProperty maxRayDepth = serializedConfig.FindProperty ("renderSettings.maxRayDepth");
+		SerializedProperty bias = serializedConfig.FindProperty ("renderSettings.bias");
+		SerializedProperty reflectionDepth = serializedConfig.FindProperty ("renderSettings.reflectionDepth");
+		SerializedProperty reflectionThreshold = serializedConfig.FindProperty ("renderSettings.reflectionThreshold");
+		SerializedProperty giTransparencyDepth = serializedConfig.FindProperty ("renderSettings.giTransparencyDepth");
+		SerializedProperty shadowDepth = serializedConfig.FindProperty ("renderSettings.shadowDepth");
+		SerializedProperty minShadowRays = serializedConfig.FindProperty ("renderSettings.minShadowRays");
+		SerializedProperty maxShadowRays = serializedConfig.FindProperty ("renderSettings.maxShadowRays");
+		SerializedProperty vertexMergeThreshold = serializedConfig.FindProperty ("renderSettings.vertexMergeThreshold");
+		SerializedProperty tsOddUVFlipping = serializedConfig.FindProperty ("renderSettings.tsOddUVFlipping");
+		SerializedProperty tsVertexOrthogonalization = serializedConfig.FindProperty ("renderSettings.tsVertexOrthogonalization");
+		SerializedProperty tsVertexNormalization = serializedConfig.FindProperty ("renderSettings.tsVertexNormalization");
+		SerializedProperty tsIntersectionOrthogonalization = serializedConfig.FindProperty ("renderSettings.tsIntersectionOrthogonalization");
+		SerializedProperty tsIntersectionNormalization = serializedConfig.FindProperty ("renderSettings.tsIntersectionNormalization");
+		
+		
 		GUILayout.Label ("Rays", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		IntField ("Max Bounces", ref config.renderSettings.maxRayDepth, "The maximum amount of 'bounces' a ray can have before being considered done. A bounce can be a reflection or refraction.");
-		FloatField ("Bias", ref config.renderSettings.bias, "An error threshold to avoid double intersections. For example, a shadow ray should not intersect the same triangle as the primary ray did, but because of limited numerical precision this can happen. The bias value moves the intersection point to eliminate this problem. If set to zero this value is computed automatically depending on the scene size.");
+		EditorGUILayout.PropertyField (maxRayDepth, new GUIContent ("Max Bounces", "The maximum amount of 'bounces' a ray can have before being considered done. A bounce can be a reflection or refraction."));
+		EditorGUILayout.PropertyField (bias, new GUIContent ("Bias", "An error threshold to avoid double intersections. For example, a shadow ray should not intersect the same triangle as the primary ray did, but because of limited numerical precision this can happen. The bias value moves the intersection point to eliminate this problem. If set to zero this value is computed automatically depending on the scene size."));
 		EditorGUI.indentLevel--;
 
 		GUILayout.Label ("Reflections & Transparency", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		IntField ("Max Reflection Bounces", ref config.renderSettings.reflectionDepth, "The maximum amount of reflections a ray can have before being considered done.");
-		FloatField ("Reflection Threshold", ref config.renderSettings.reflectionThreshold, "If the intensity of the reflected contribution is less than the threshold, the ray will be terminated.");
-		IntField ("GI Transparency Depth", ref config.renderSettings.giTransparencyDepth, "Controls the maximum transparency depth for Global Illumination rays. Used to speed up renderings with a lot of transparency (for example trees).");
+		EditorGUILayout.PropertyField (reflectionDepth, new GUIContent ("Max Reflection Bounces", "The maximum amount of reflections a ray can have before being considered done."));
+		EditorGUILayout.PropertyField (reflectionThreshold, new GUIContent ("Reflection Threshold", "If the intensity of the reflected contribution is less than the threshold, the ray will be terminated."));
+		EditorGUILayout.PropertyField (giTransparencyDepth, new GUIContent ("GI Transparency Depth", "Controls the maximum transparency depth for Global Illumination rays. Used to speed up renderings with a lot of transparency (for example trees)."));
 		EditorGUI.indentLevel--;
 
 		GUILayout.Label ("Shadows", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		config.renderSettings.shadowDepth = (int)((ILConfig.ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ILConfig.ShadowDepth)System.Enum.Parse (typeof(ILConfig.ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
-		IntField ("Min Shadow Rays", ref config.renderSettings.minShadowRays, "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays.");
-		IntField ("Max Shadow Rays", ref config.renderSettings.maxShadowRays, "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value.");
+		EditorGUILayout.PropertyField (minShadowRays, new GUIContent ("Min Shadow Rays", "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays."));
+		EditorGUILayout.PropertyField (maxShadowRays, new GUIContent ("Max Shadow Rays", "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value."));
 		EditorGUI.indentLevel--;
 
 		GUILayout.Label ("Geometry", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		FloatField ("Vertex Merge Threshold", ref config.renderSettings.vertexMergeThreshold, "Triangle vertices that are closer together than this threshold will be merged into one (if possible depending on other vertex data).");
-		Toggle ("Odd UV Flipping", ref config.renderSettings.tsOddUVFlipping, "Using this setting will force Beast to mirror tangent and binormal when UV has odd winding direction.");
-		Toggle ("Vertex Orthogonalization", ref config.renderSettings.tsVertexOrthogonalization, "Orthogonalize tangent space basis vectors (tangent, binormal and normal) at every vertex.");
-		Toggle ("Vertex Normalization", ref config.renderSettings.tsVertexNormalization, "Normalize tangent space basis vectors (tangent, binormal and normal) at every vertex.");
-		Toggle ("Intersection Orthogonalization", ref config.renderSettings.tsIntersectionOrthogonalization, "Orthogonalize tangent space basis vectors (tangent, binormal and normal) at every intersection point.");
-		Toggle ("Intersection Normalization", ref config.renderSettings.tsIntersectionNormalization, "Normalize tangent space basis vectors (tangent, binormal and normal) at every intersection point.");
+		EditorGUILayout.PropertyField (vertexMergeThreshold, new GUIContent ("Vertex Merge Threshold", "Triangle vertices that are closer together than this threshold will be merged into one (if possible depending on other vertex data)."));
+		EditorGUILayout.PropertyField (tsOddUVFlipping, new GUIContent ("Odd UV Flipping", "Using this setting will force Beast to mirror tangent and binormal when UV has odd winding direction."));
+		EditorGUILayout.PropertyField (tsVertexOrthogonalization, new GUIContent ("Vertex Orthogonalization", "Orthogonalize tangent space basis vectors (tangent, binormal and normal) at every vertex."));
+		EditorGUILayout.PropertyField (tsVertexNormalization, new GUIContent ("Vertex Normalization", "Normalize tangent space basis vectors (tangent, binormal and normal) at every vertex."));
+		EditorGUILayout.PropertyField (tsIntersectionOrthogonalization, new GUIContent ("Intersection Orthogonalization", "Orthogonalize tangent space basis vectors (tangent, binormal and normal) at every intersection point."));
+		EditorGUILayout.PropertyField (tsIntersectionNormalization, new GUIContent ("Intersection Normalization", "Normalize tangent space basis vectors (tangent, binormal and normal) at every intersection point."));
 		EditorGUI.indentLevel--;
 	}
 
-	void GlobalIlluminationGUI ()
+	void GlobalIlluminationGUI (SerializedObject serializedConfig)
 	{
+		SerializedProperty enableGI = serializedConfig.FindProperty ("giSettings.enableGI");
+		SerializedProperty primaryIntegrator = serializedConfig.FindProperty ("giSettings.primaryIntegrator");
+		SerializedProperty secondaryIntegrator = serializedConfig.FindProperty ("giSettings.secondaryIntegrator");
+		SerializedProperty fgLightLeakReduction = serializedConfig.FindProperty ("giSettings.fgLightLeakReduction");
+		SerializedProperty fgLightLeakRadius = serializedConfig.FindProperty ("giSettings.fgLightLeakRadius");
+		
 		Toggle ("Enable GI", ref config.giSettings.enableGI, "");
 		EditorGUI.BeginDisabledGroup (!config.giSettings.enableGI);
 		
@@ -428,21 +466,21 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUILayout.Space ();
 
 		GUILayout.Label ("Primary Integrator", EditorStyles.boldLabel);
-		IntegratorPopup (true);
-		IntegratorSettings (config.giSettings.primaryIntegrator, true);
+		IntegratorPopup (serializedConfig, true);
+		IntegratorSettings (serializedConfig, config.giSettings.primaryIntegrator, true);
 
 		EditorGUILayout.Space ();
 
 		GUILayout.Label ("Secondary Integrator", EditorStyles.boldLabel);
-		IntegratorPopup (false);
-		IntegratorSettings (config.giSettings.secondaryIntegrator, false);
+		IntegratorPopup (serializedConfig, false);
+		IntegratorSettings (serializedConfig, config.giSettings.secondaryIntegrator, false);
 
 		if (config.giSettings.primaryIntegrator == ILConfig.GISettings.Integrator.FinalGather && config.giSettings.secondaryIntegrator == ILConfig.GISettings.Integrator.PathTracer) {
 			EditorGUILayout.Space ();
-			Toggle ("Light Leak Reduction", ref config.giSettings.fgLightLeakReduction, "This setting can be used to reduce light leakage through walls when using final gather as primary GI and path tracing as secondary GI. Leakage, which can happen when e.g. the path tracer filters in values on the other side of a wall, is reduced by using final gather as a secondary GI fallback when sampling close to walls or corners. When this is enabled a final gather depth of 3 will be used automatically, but the higher depths will only be used close to walls or corners. Note that this is only used when path tracing is set as secondary GI.");
+			EditorGUILayout.PropertyField (fgLightLeakReduction, new GUIContent ("Light Leak Reduction", "This setting can be used to reduce light leakage through walls when using final gather as primary GI and path tracing as secondary GI. Leakage, which can happen when e.g. the path tracer filters in values on the other side of a wall, is reduced by using final gather as a secondary GI fallback when sampling close to walls or corners. When this is enabled a final gather depth of 3 will be used automatically, but the higher depths will only be used close to walls or corners. Note that this is only used when path tracing is set as secondary GI."));
 			if (!config.giSettings.fgLightLeakReduction)
 				GUI.enabled = false;
-			FloatField ("Light Leak Radius", ref config.giSettings.fgLightLeakRadius, "Controls how far away from walls the final gather will be called again, instead of the secondary GI. If 0.0 is used a value will be calculated by Beast depending on the secondary GI used. The calculated value is printed in the output window. If you still get leakage you can adjust this by manually typing in a higher value.");
+			EditorGUILayout.PropertyField (fgLightLeakRadius, new GUIContent ("Light Leak Radius", "Controls how far away from walls the final gather will be called again, instead of the secondary GI. If 0.0 is used a value will be calculated by Beast depending on the secondary GI used. The calculated value is printed in the output window. If you still get leakage you can adjust this by manually typing in a higher value."));
 			if (config.giSettings.enableGI)
 				GUI.enabled = true;
 		}
@@ -450,29 +488,36 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.EndDisabledGroup ();
 	}
 
-	void IntegratorPopup (bool isPrimary)
+	void IntegratorPopup (SerializedObject serializedObject, bool isPrimary)
 	{
+		SerializedProperty primaryIntegrator = serializedObject.FindProperty ("giSettings.primaryIntegrator");
+		SerializedProperty secondaryIntegrator = serializedObject.FindProperty ("giSettings.secondaryIntegrator");
+		
 		if (isPrimary) {
-			config.giSettings.primaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.primaryIntegrator);
+			EditorGUILayout.PropertyField (primaryIntegrator, new GUIContent (""));
 		} else {
-			config.giSettings.secondaryIntegrator = (ILConfig.GISettings.Integrator)EditorGUILayout.EnumPopup (config.giSettings.secondaryIntegrator);
+			EditorGUILayout.PropertyField (secondaryIntegrator, new GUIContent (""));
 		}
 	}
 
-	void IntegratorSettings (ILConfig.GISettings.Integrator integrator, bool isPrimary)
+	void IntegratorSettings (SerializedObject serializedObject, ILConfig.GISettings.Integrator integrator, bool isPrimary)
 	{
-		EditorGUI.indentLevel++;
+//		EditorGUI.indentLevel++;
 
 		if (integrator != ILConfig.GISettings.Integrator.None) {
 			if (isPrimary) {
-				FloatField ("Intensity", ref config.giSettings.primaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-				FloatField ("Saturation", ref config.giSettings.primarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+				SerializedProperty primaryIntensity = serializedObject.FindProperty ("giSettings.primaryIntensity");
+				SerializedProperty primarySaturation = serializedObject.FindProperty ("giSettings.primarySaturation");
+				EditorGUILayout.PropertyField (primaryIntensity, new GUIContent ("Intensity", "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily."));
+				EditorGUILayout.PropertyField (primarySaturation, new GUIContent ("Saturation", "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light."));
 			} else {
-				FloatField ("Intensity", ref config.giSettings.secondaryIntensity, "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily.");
-				FloatField ("Saturation", ref config.giSettings.secondarySaturation, "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light.");
+				SerializedProperty secondaryIntensity = serializedObject.FindProperty ("giSettings.secondaryIntensity");
+				SerializedProperty secondarySaturation = serializedObject.FindProperty ("giSettings.secondarySaturation");
+				EditorGUILayout.PropertyField (secondaryIntensity, new GUIContent ("Intensity", "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily."));
+				EditorGUILayout.PropertyField (secondarySaturation, new GUIContent ("Saturation", "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light."));
 			}
 		}
-
+		
 		switch (integrator) {
 		case ILConfig.GISettings.Integrator.None:
 			if (isPrimary && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.None)
@@ -481,20 +526,28 @@ public class LMExtendedWindow : EditorWindow
 				config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
 			break;
 		case ILConfig.GISettings.Integrator.FinalGather:
-			FinalGatherSettings (isPrimary);
+			FinalGatherSettings (serializedObject, isPrimary);
 			break;
 		case ILConfig.GISettings.Integrator.PathTracer:
-			PathTracerSettings (isPrimary);
+			PathTracerSettings (serializedObject, isPrimary);
 			break;
 		case ILConfig.GISettings.Integrator.MonteCarlo:
-			MonteCarloSettings (isPrimary);
+			MonteCarloSettings (serializedObject, isPrimary);
 			break;
 		}
-		EditorGUI.indentLevel--;
+//		EditorGUI.indentLevel--;
 	}
 	
-	void FinalGatherSettings (bool isPrimaryIntegrator)
+	void FinalGatherSettings (SerializedObject serializedObject, bool isPrimaryIntegrator)
 	{
+		// FIXME add undo
+		
+//		SerializedProperty fgDepth = serializedConfig.FindProperty ("giSettings.fgDepth");
+//		SerializedProperty diffuseBoost = serializedConfig.FindProperty ("giSettings.diffuseBoost");
+//		SerializedProperty fgRays = serializedConfig.FindProperty ("giSettings.fgRays");
+//		SerializedProperty fgMaxRayLength = serializedConfig.FindProperty ("giSettings.fgMaxRayLength");
+//		SerializedProperty fgAttenuationStart = serializedConfig.FindProperty ("giSettings.fgAttenuationStart");
+		
 		if (isPrimaryIntegrator && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
 			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
@@ -563,8 +616,10 @@ public class LMExtendedWindow : EditorWindow
 		Toggle ("Cache Direct Light", ref config.giSettings.fgCacheDirectLight, "When this is enabled final gather will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost. However this caching is only done for depths higher than 1, so the quality of direct light and shadows in the light map will not be reduced.");
 	}
 	
-	void PathTracerSettings (bool isPrimaryIntegrator)
+	void PathTracerSettings (SerializedObject serializedObject, bool isPrimaryIntegrator)
 	{
+		// FIXME add undo
+		
 		if (isPrimaryIntegrator && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
 			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
@@ -592,8 +647,10 @@ public class LMExtendedWindow : EditorWindow
 		Toggle ("Precalc Irradiance", ref config.giSettings.ptPrecalcIrradiance, "If enabled the cache points will be pre-filtered before the final pass starts. This increases the performance using the final render pass.");
 	}
 
-	void MonteCarloSettings (bool isPrimaryIntegrator)
+	void MonteCarloSettings (SerializedObject serializedObject, bool isPrimaryIntegrator)
 	{
+		// FIXME add undo
+		
 		if (isPrimaryIntegrator && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
 			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
@@ -604,8 +661,10 @@ public class LMExtendedWindow : EditorWindow
 		FloatField ("Ray Length", ref config.giSettings.mcMaxRayLength, "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used.");
 	}
 
-	void EnvironmentGUI ()
+	void EnvironmentGUI (SerializedObject serializedConfig)
 	{
+		// FIXME add undo
+		
 		config.environmentSettings.giEnvironment = (ILConfig.EnvironmentSettings.Environment)EditorGUILayout.EnumPopup ("Environment Type", config.environmentSettings.giEnvironment);
 		
 		EditorGUI.BeginDisabledGroup (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None);
@@ -701,8 +760,11 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.EndDisabledGroup ();
 	}
 	
-	void TextureBakeGUI ()
+	void TextureBakeGUI (SerializedObject serializedConfig)
 	{
+		SerializedProperty bilinearFilter = serializedConfig.FindProperty ("textureBakeSettings.bilinearFilter");
+		SerializedProperty conservativeRasterization = serializedConfig.FindProperty ("textureBakeSettings.conservativeRasterization");
+		
 		GUILayout.Label ("Texture", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		
@@ -719,8 +781,8 @@ public class LMExtendedWindow : EditorWindow
 //		EditorGUI.indentLevel--;
 //		GUI.enabled = true;
 		
-		Toggle ("Bilinear Filter", ref config.textureBakeSettings.bilinearFilter, "Counteract unwanted light seams for tightly packed UV patches.");
-		Toggle ("Conservative Rasterization", ref config.textureBakeSettings.conservativeRasterization, "Find pixels which are only partially covered by the UV map.");
+		EditorGUILayout.PropertyField (bilinearFilter, new GUIContent ("Bilinear Filter", "Counteract unwanted light seams for tightly packed UV patches."));
+		EditorGUILayout.PropertyField (conservativeRasterization, new GUIContent ("Conservative Rasterization", "Find pixels which are only partially covered by the UV map."));
 
 		EditorGUI.indentLevel--;
 	}
