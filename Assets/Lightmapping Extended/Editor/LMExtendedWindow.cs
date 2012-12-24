@@ -30,13 +30,14 @@ public class LMExtendedWindow : EditorWindow
 {
 	const string assetFolderName = "Lightmapping Extended";
 	
-	private ILConfig config;
+	public SerializedConfig sc;
 
 	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
 	static void Init ()
 	{
 		var window = EditorWindow.GetWindow<LMExtendedWindow> (false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
+		window.sc = ScriptableObject.CreateInstance<SerializedConfig> ();
 	}
 	
 	#region Configuration
@@ -55,7 +56,7 @@ public class LMExtendedWindow : EditorWindow
 	
 	void SaveConfig ()
 	{
-		config.SerializeToPath (ConfigFilePath);
+		sc.config.SerializeToPath (ConfigFilePath);
 	}
 	
 	#endregion
@@ -72,7 +73,7 @@ public class LMExtendedWindow : EditorWindow
 	{
 		if (!File.Exists (ConfigFilePath)) {
 			SetPresetToDefault ();
-			config = null;
+			sc.config = null;
 		}
 		Repaint ();
 	}
@@ -80,14 +81,14 @@ public class LMExtendedWindow : EditorWindow
 	void OnFocus ()
 	{
 		if (!File.Exists (ConfigFilePath))
-			config = null;
+			sc.config = null;
 		Repaint ();
 	}
 
 	void OnProjectChange ()
 	{
 		if (!File.Exists (ConfigFilePath))
-			config = null;
+			sc.config = null;
 		Repaint ();
 	}
 	
@@ -107,9 +108,9 @@ public class LMExtendedWindow : EditorWindow
 		
 		// Determine if config file exists
 		bool haveConfigFile = false;
-		if (config == null) {
+		if (sc.config == null) {
 			if (File.Exists (path)) {
-				config = ILConfig.DeserializeFromPath (path);
+				sc.config = ILConfig.DeserializeFromPath (path);
 				haveConfigFile = true;
 			}
 		} else {
@@ -126,7 +127,7 @@ public class LMExtendedWindow : EditorWindow
 				if (!Directory.Exists (dir))
 					Directory.CreateDirectory (dir);
 				newConfig.SerializeToPath (ConfigFilePath);
-				config = ILConfig.DeserializeFromPath (path);
+				sc.config = ILConfig.DeserializeFromPath (path);
 				AssetDatabase.Refresh ();
 				GUIUtility.ExitGUI ();
 			}
@@ -150,25 +151,24 @@ public class LMExtendedWindow : EditorWindow
 
 		scroll = EditorGUILayout.BeginScrollView (scroll);
 		{
-			SerializedObject serializedConfig = new SerializedObject (config);
+			SerializedObject configObj = new SerializedObject (sc);
 			switch (toolbarSelected) {
 			case 0:
-				PerformanceSettingsGUI (serializedConfig);
-				TextureBakeGUI (serializedConfig);
-				AASettingsGUI (serializedConfig);
-				RenderSettingsGUI (serializedConfig);
+				PerformanceSettingsGUI (configObj);
+				TextureBakeGUI (configObj);
+				AASettingsGUI (configObj);
+				RenderSettingsGUI (configObj);
 				break;
 			case 1:
-				GlobalIlluminationGUI (serializedConfig);
+				GlobalIlluminationGUI (configObj);
 				break;
 			case 2:
-				EnvironmentGUI (serializedConfig);
+				EnvironmentGUI (configObj);
 				break;
 			}
-
-			serializedConfig.ApplyModifiedProperties ();
 			
 			if (GUI.changed) {
+				configObj.ApplyModifiedProperties ();
 				SaveConfig ();
 			}
 		}
@@ -288,7 +288,7 @@ public class LMExtendedWindow : EditorWindow
 			Debug.Log ("Create " + dir);
 			Directory.CreateDirectory (dir);
 		}
-		this.config.SerializeToPath (GetPresetPath (name));
+		sc.config.SerializeToPath (GetPresetPath (name));
 		AssetDatabase.Refresh ();
 		currentPresetName = name;
 	}
@@ -304,7 +304,7 @@ public class LMExtendedWindow : EditorWindow
 	void LoadPreset (string name)
 	{
 		// Load the preset config file
-		config = ILConfig.DeserializeFromPath (GetPresetPath (name));
+		sc.config = ILConfig.DeserializeFromPath (GetPresetPath (name));
 		// Save preset data back out to our scene's config file
 		SaveConfig ();
 	}
@@ -330,22 +330,22 @@ public class LMExtendedWindow : EditorWindow
 	
 	#region Settings
 	
-	void PerformanceSettingsGUI (SerializedObject serializedConfig)
+	void PerformanceSettingsGUI (SerializedObject serializedObject)
 	{
-		SerializedProperty autoThreads = serializedConfig.FindProperty ("frameSettings.autoThreads");
-		SerializedProperty autoThreadsSubtract = serializedConfig.FindProperty ("frameSettings.autoThreadsSubtract");
-		SerializedProperty renderThreads = serializedConfig.FindProperty ("frameSettings.renderThreads");
+		SerializedProperty autoThreads = serializedObject.FindProperty ("config.frameSettings.autoThreads");
+		SerializedProperty autoThreadsSubtract = serializedObject.FindProperty ("config.frameSettings.autoThreadsSubtract");
+		SerializedProperty renderThreads = serializedObject.FindProperty ("config.frameSettings.renderThreads");
 		
 		// Threads
 		GUILayout.Label ("CPU", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
 		EditorGUILayout.PropertyField (autoThreads, new GUIContent ("Auto Threads", "If enabled, Beast will try to auto detect the CPU configuration and use one thread per core."));
 		EditorGUI.indentLevel++;
-		if (!config.frameSettings.autoThreads)
+		if (!sc.config.frameSettings.autoThreads)
 			GUI.enabled = false;
 		EditorGUILayout.PropertyField (autoThreadsSubtract, new GUIContent ("Subtract Threads", "If autoThreads is enabled, this can be used to decrease the number of utilized cores, e.g. to leave one or two cores free to do other work."));
 		GUI.enabled = true;
-		if (config.frameSettings.autoThreads)
+		if (sc.config.frameSettings.autoThreads)
 			GUI.enabled = false;
 		EditorGUILayout.PropertyField (renderThreads, new GUIContent ("Render Threads", "If autoThreads is disabled, this will set the number of threads beast uses. One per core is a good start."));
 		GUI.enabled = true;
@@ -375,13 +375,13 @@ public class LMExtendedWindow : EditorWindow
 	
 	void AASettingsGUI (SerializedObject serializedConfig)
 	{
-		SerializedProperty samplingMode = serializedConfig.FindProperty ("aaSettings.samplingMode");
-		SerializedProperty minSampleRate = serializedConfig.FindProperty ("aaSettings.minSampleRate");
-		SerializedProperty maxSampleRate = serializedConfig.FindProperty ("aaSettings.maxSampleRate");
-		SerializedProperty contrast = serializedConfig.FindProperty ("aaSettings.contrast");
-		SerializedProperty filter = serializedConfig.FindProperty ("aaSettings.filter");
-		SerializedProperty filterSizeX = serializedConfig.FindProperty ("aaSettings.filterSize.x");
-		SerializedProperty filterSizeY = serializedConfig.FindProperty ("aaSettings.filterSize.y");
+		SerializedProperty samplingMode = serializedConfig.FindProperty ("config.aaSettings.samplingMode");
+		SerializedProperty minSampleRate = serializedConfig.FindProperty ("config.aaSettings.minSampleRate");
+		SerializedProperty maxSampleRate = serializedConfig.FindProperty ("config.aaSettings.maxSampleRate");
+		SerializedProperty contrast = serializedConfig.FindProperty ("config.aaSettings.contrast");
+		SerializedProperty filter = serializedConfig.FindProperty ("config.aaSettings.filter");
+		SerializedProperty filterSizeX = serializedConfig.FindProperty ("config.aaSettings.filterSize.x");
+		SerializedProperty filterSizeY = serializedConfig.FindProperty ("config.aaSettings.filterSize.y");
 		
 		GUILayout.Label ("Antialiasing", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
@@ -402,20 +402,20 @@ public class LMExtendedWindow : EditorWindow
 	
 	void RenderSettingsGUI (SerializedObject serializedConfig)
 	{
-		SerializedProperty maxRayDepth = serializedConfig.FindProperty ("renderSettings.maxRayDepth");
-		SerializedProperty bias = serializedConfig.FindProperty ("renderSettings.bias");
-		SerializedProperty reflectionDepth = serializedConfig.FindProperty ("renderSettings.reflectionDepth");
-		SerializedProperty reflectionThreshold = serializedConfig.FindProperty ("renderSettings.reflectionThreshold");
-		SerializedProperty giTransparencyDepth = serializedConfig.FindProperty ("renderSettings.giTransparencyDepth");
-//		SerializedProperty shadowDepth = serializedConfig.FindProperty ("renderSettings.shadowDepth");
-		SerializedProperty minShadowRays = serializedConfig.FindProperty ("renderSettings.minShadowRays");
-		SerializedProperty maxShadowRays = serializedConfig.FindProperty ("renderSettings.maxShadowRays");
-		SerializedProperty vertexMergeThreshold = serializedConfig.FindProperty ("renderSettings.vertexMergeThreshold");
-		SerializedProperty tsOddUVFlipping = serializedConfig.FindProperty ("renderSettings.tsOddUVFlipping");
-		SerializedProperty tsVertexOrthogonalization = serializedConfig.FindProperty ("renderSettings.tsVertexOrthogonalization");
-		SerializedProperty tsVertexNormalization = serializedConfig.FindProperty ("renderSettings.tsVertexNormalization");
-		SerializedProperty tsIntersectionOrthogonalization = serializedConfig.FindProperty ("renderSettings.tsIntersectionOrthogonalization");
-		SerializedProperty tsIntersectionNormalization = serializedConfig.FindProperty ("renderSettings.tsIntersectionNormalization");
+		SerializedProperty maxRayDepth = serializedConfig.FindProperty ("config.renderSettings.maxRayDepth");
+		SerializedProperty bias = serializedConfig.FindProperty ("config.renderSettings.bias");
+		SerializedProperty reflectionDepth = serializedConfig.FindProperty ("config.renderSettings.reflectionDepth");
+		SerializedProperty reflectionThreshold = serializedConfig.FindProperty ("config.renderSettings.reflectionThreshold");
+		SerializedProperty giTransparencyDepth = serializedConfig.FindProperty ("config.renderSettings.giTransparencyDepth");
+//		SerializedProperty shadowDepth = serializedConfig.FindProperty ("config.renderSettings.shadowDepth");
+		SerializedProperty minShadowRays = serializedConfig.FindProperty ("config.renderSettings.minShadowRays");
+		SerializedProperty maxShadowRays = serializedConfig.FindProperty ("config.renderSettings.maxShadowRays");
+		SerializedProperty vertexMergeThreshold = serializedConfig.FindProperty ("config.renderSettings.vertexMergeThreshold");
+		SerializedProperty tsOddUVFlipping = serializedConfig.FindProperty ("config.renderSettings.tsOddUVFlipping");
+		SerializedProperty tsVertexOrthogonalization = serializedConfig.FindProperty ("config.renderSettings.tsVertexOrthogonalization");
+		SerializedProperty tsVertexNormalization = serializedConfig.FindProperty ("config.renderSettings.tsVertexNormalization");
+		SerializedProperty tsIntersectionOrthogonalization = serializedConfig.FindProperty ("config.renderSettings.tsIntersectionOrthogonalization");
+		SerializedProperty tsIntersectionNormalization = serializedConfig.FindProperty ("config.renderSettings.tsIntersectionNormalization");
 		
 		
 		GUILayout.Label ("Rays", EditorStyles.boldLabel);
@@ -435,7 +435,7 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.indentLevel++;
 		
 		// FIXME add undo
-		config.renderSettings.shadowDepth = (int)((ILConfig.ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ILConfig.ShadowDepth)System.Enum.Parse (typeof(ILConfig.ShadowDepth), config.renderSettings.shadowDepth.ToString ())));
+		sc.config.renderSettings.shadowDepth = (int)((ILConfig.ShadowDepth)EditorGUILayout.EnumPopup (new GUIContent ("Shadow Depth", "Controls which rays that spawn shadow rays."), (ILConfig.ShadowDepth)System.Enum.Parse (typeof(ILConfig.ShadowDepth), sc.config.renderSettings.shadowDepth.ToString ())));
 		
 		EditorGUILayout.PropertyField (minShadowRays, new GUIContent ("Min Shadow Rays", "The minimum number of shadow rays that will be sent to determine if a point is lit by a specific light source. Use this value to ensure that you get enough quality in soft shadows at the price of render times. This will raise the minimum number of rays sent for any light sources that have a minShadowSamples setting lower than this value, but will not lower the number if minShadowSamples is set to a higher value. Setting this to a value higher than maxShadowRays will not send more rays than maxShadowRays."));
 		EditorGUILayout.PropertyField (maxShadowRays, new GUIContent ("Max Shadow Rays", "The maximum number of shadow rays per point that will be used to generate a soft shadow for any light source. Use this to shorten render times at the price of soft shadow quality. This will lower the maximum number of rays sent for any light sources that have a shadow samples setting higher than this value, but will not raise the number if shadow samples is set to a lower value."));
@@ -454,12 +454,12 @@ public class LMExtendedWindow : EditorWindow
 
 	void GlobalIlluminationGUI (SerializedObject serializedConfig)
 	{
-		SerializedProperty enableGI = serializedConfig.FindProperty ("giSettings.enableGI");
-		SerializedProperty fgLightLeakReduction = serializedConfig.FindProperty ("giSettings.fgLightLeakReduction");
-		SerializedProperty fgLightLeakRadius = serializedConfig.FindProperty ("giSettings.fgLightLeakRadius");
+		SerializedProperty enableGI = serializedConfig.FindProperty ("config.giSettings.enableGI");
+		SerializedProperty fgLightLeakReduction = serializedConfig.FindProperty ("config.giSettings.fgLightLeakReduction");
+		SerializedProperty fgLightLeakRadius = serializedConfig.FindProperty ("config.giSettings.fgLightLeakRadius");
 		
 		EditorGUILayout.PropertyField (enableGI, new GUIContent ("Enable GI", ""));
-		EditorGUI.BeginDisabledGroup (!config.giSettings.enableGI);
+		EditorGUI.BeginDisabledGroup (!sc.config.giSettings.enableGI);
 		
 		// Caustics have no effect as of Unity 4.0
 //		Toggle ("Enable Caustics", ref config.giSettings.enableCaustics, "");
@@ -468,21 +468,21 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Primary Integrator", EditorStyles.boldLabel);
 		IntegratorPopup (serializedConfig, true);
-		IntegratorSettings (serializedConfig, config.giSettings.primaryIntegrator, true);
+		IntegratorSettings (serializedConfig, sc.config.giSettings.primaryIntegrator, true);
 
 		EditorGUILayout.Space ();
 
 		GUILayout.Label ("Secondary Integrator", EditorStyles.boldLabel);
 		IntegratorPopup (serializedConfig, false);
-		IntegratorSettings (serializedConfig, config.giSettings.secondaryIntegrator, false);
+		IntegratorSettings (serializedConfig, sc.config.giSettings.secondaryIntegrator, false);
 
-		if (config.giSettings.primaryIntegrator == ILConfig.GISettings.Integrator.FinalGather && config.giSettings.secondaryIntegrator == ILConfig.GISettings.Integrator.PathTracer) {
+		if (sc.config.giSettings.primaryIntegrator == ILConfig.GISettings.Integrator.FinalGather && sc.config.giSettings.secondaryIntegrator == ILConfig.GISettings.Integrator.PathTracer) {
 			EditorGUILayout.Space ();
 			EditorGUILayout.PropertyField (fgLightLeakReduction, new GUIContent ("Light Leak Reduction", "This setting can be used to reduce light leakage through walls when using final gather as primary GI and path tracing as secondary GI. Leakage, which can happen when e.g. the path tracer filters in values on the other side of a wall, is reduced by using final gather as a secondary GI fallback when sampling close to walls or corners. When this is enabled a final gather depth of 3 will be used automatically, but the higher depths will only be used close to walls or corners. Note that this is only used when path tracing is set as secondary GI."));
-			if (!config.giSettings.fgLightLeakReduction)
+			if (!sc.config.giSettings.fgLightLeakReduction)
 				GUI.enabled = false;
 			EditorGUILayout.PropertyField (fgLightLeakRadius, new GUIContent ("Light Leak Radius", "Controls how far away from walls the final gather will be called again, instead of the secondary GI. If 0.0 is used a value will be calculated by Beast depending on the secondary GI used. The calculated value is printed in the output window. If you still get leakage you can adjust this by manually typing in a higher value."));
-			if (config.giSettings.enableGI)
+			if (sc.config.giSettings.enableGI)
 				GUI.enabled = true;
 		}
 		
@@ -491,8 +491,8 @@ public class LMExtendedWindow : EditorWindow
 
 	void IntegratorPopup (SerializedObject serializedObject, bool isPrimary)
 	{
-		SerializedProperty primaryIntegrator = serializedObject.FindProperty ("giSettings.primaryIntegrator");
-		SerializedProperty secondaryIntegrator = serializedObject.FindProperty ("giSettings.secondaryIntegrator");
+		SerializedProperty primaryIntegrator = serializedObject.FindProperty ("config.giSettings.primaryIntegrator");
+		SerializedProperty secondaryIntegrator = serializedObject.FindProperty ("config.giSettings.secondaryIntegrator");
 		
 		if (isPrimary) {
 			EditorGUILayout.PropertyField (primaryIntegrator, new GUIContent (""));
@@ -505,13 +505,13 @@ public class LMExtendedWindow : EditorWindow
 	{
 		if (integrator != ILConfig.GISettings.Integrator.None) {
 			if (isPrimary) {
-				SerializedProperty primaryIntensity = serializedObject.FindProperty ("giSettings.primaryIntensity");
-				SerializedProperty primarySaturation = serializedObject.FindProperty ("giSettings.primarySaturation");
+				SerializedProperty primaryIntensity = serializedObject.FindProperty ("config.giSettings.primaryIntensity");
+				SerializedProperty primarySaturation = serializedObject.FindProperty ("config.giSettings.primarySaturation");
 				EditorGUILayout.PropertyField (primaryIntensity, new GUIContent ("Intensity", "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily."));
 				EditorGUILayout.PropertyField (primarySaturation, new GUIContent ("Saturation", "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light."));
 			} else {
-				SerializedProperty secondaryIntensity = serializedObject.FindProperty ("giSettings.secondaryIntensity");
-				SerializedProperty secondarySaturation = serializedObject.FindProperty ("giSettings.secondarySaturation");
+				SerializedProperty secondaryIntensity = serializedObject.FindProperty ("config.giSettings.secondaryIntensity");
+				SerializedProperty secondarySaturation = serializedObject.FindProperty ("config.giSettings.secondarySaturation");
 				EditorGUILayout.PropertyField (secondaryIntensity, new GUIContent ("Intensity", "Tweak the amount of illumination from the primary and secondary GI integrators. This lets you boost or reduce the amount of indirect light easily."));
 				EditorGUILayout.PropertyField (secondarySaturation, new GUIContent ("Saturation", "Lets you tweak the amount of color in the primary and secondary GI integrators. This lets you boost or reduce the perceived saturation of the bounced light."));
 			}
@@ -519,10 +519,10 @@ public class LMExtendedWindow : EditorWindow
 		
 		switch (integrator) {
 		case ILConfig.GISettings.Integrator.None:
-			if (isPrimary && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.None)
-				config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.None;
-			else if (!isPrimary && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.None)
-				config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
+			if (isPrimary && sc.config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.None)
+				sc.config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.None;
+			else if (!isPrimary && sc.config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.None)
+				sc.config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.None;
 			break;
 		case ILConfig.GISettings.Integrator.FinalGather:
 			FinalGatherSettings (serializedObject, isPrimary);
@@ -538,32 +538,32 @@ public class LMExtendedWindow : EditorWindow
 	
 	void FinalGatherSettings (SerializedObject serializedConfig, bool isPrimaryIntegrator)
 	{
-		SerializedProperty fgDepth = serializedConfig.FindProperty ("giSettings.fgDepth");
-		SerializedProperty diffuseBoost = serializedConfig.FindProperty ("giSettings.diffuseBoost");
-		SerializedProperty fgRays = serializedConfig.FindProperty ("giSettings.fgRays");
-		SerializedProperty fgMaxRayLength = serializedConfig.FindProperty ("giSettings.fgMaxRayLength");
-		SerializedProperty fgAttenuationStart = serializedConfig.FindProperty ("giSettings.fgAttenuationStart");
-		SerializedProperty fgAttenuationStop = serializedConfig.FindProperty ("giSettings.fgAttenuationStop");
-		SerializedProperty fgFalloffExponent = serializedConfig.FindProperty ("giSettings.fgFalloffExponent");
-		SerializedProperty fgInterpolationPoints = serializedConfig.FindProperty ("giSettings.fgInterpolationPoints");
-		SerializedProperty fgEstimatePoints = serializedConfig.FindProperty ("giSettings.fgEstimatePoints");
-		SerializedProperty fgCheckVisibility = serializedConfig.FindProperty ("giSettings.fgCheckVisibility");
-		SerializedProperty fgContrastThreshold = serializedConfig.FindProperty ("giSettings.fgContrastThreshold");
-		SerializedProperty fgGradientThreshold = serializedConfig.FindProperty ("giSettings.fgGradientThreshold");
-		SerializedProperty fgNormalThreshold = serializedConfig.FindProperty ("giSettings.fgNormalThreshold");
-		SerializedProperty fgClampRadiance = serializedConfig.FindProperty ("giSettings.fgClampRadiance");
-		SerializedProperty fgAOInfluence = serializedConfig.FindProperty ("giSettings.fgAOInfluence");
-		SerializedProperty fgAOContrast = serializedConfig.FindProperty ("giSettings.fgAOContrast");
-		SerializedProperty fgAOMaxDistance = serializedConfig.FindProperty ("giSettings.fgAOMaxDistance");
-		SerializedProperty fgAOScale = serializedConfig.FindProperty ("giSettings.fgAOScale");
-		SerializedProperty fgPreview = serializedConfig.FindProperty ("giSettings.fgPreview");
-		SerializedProperty fgUseCache = serializedConfig.FindProperty ("giSettings.fgUseCache");
-		SerializedProperty fgCacheDirectLight = serializedConfig.FindProperty ("giSettings.fgCacheDirectLight");
+		SerializedProperty fgDepth = serializedConfig.FindProperty ("config.giSettings.fgDepth");
+		SerializedProperty diffuseBoost = serializedConfig.FindProperty ("config.giSettings.diffuseBoost");
+		SerializedProperty fgRays = serializedConfig.FindProperty ("config.giSettings.fgRays");
+		SerializedProperty fgMaxRayLength = serializedConfig.FindProperty ("config.giSettings.fgMaxRayLength");
+		SerializedProperty fgAttenuationStart = serializedConfig.FindProperty ("config.giSettings.fgAttenuationStart");
+		SerializedProperty fgAttenuationStop = serializedConfig.FindProperty ("config.giSettings.fgAttenuationStop");
+		SerializedProperty fgFalloffExponent = serializedConfig.FindProperty ("config.giSettings.fgFalloffExponent");
+		SerializedProperty fgInterpolationPoints = serializedConfig.FindProperty ("config.giSettings.fgInterpolationPoints");
+		SerializedProperty fgEstimatePoints = serializedConfig.FindProperty ("config.giSettings.fgEstimatePoints");
+		SerializedProperty fgCheckVisibility = serializedConfig.FindProperty ("config.giSettings.fgCheckVisibility");
+		SerializedProperty fgContrastThreshold = serializedConfig.FindProperty ("config.giSettings.fgContrastThreshold");
+		SerializedProperty fgGradientThreshold = serializedConfig.FindProperty ("config.giSettings.fgGradientThreshold");
+		SerializedProperty fgNormalThreshold = serializedConfig.FindProperty ("config.giSettings.fgNormalThreshold");
+		SerializedProperty fgClampRadiance = serializedConfig.FindProperty ("config.giSettings.fgClampRadiance");
+		SerializedProperty fgAOInfluence = serializedConfig.FindProperty ("config.giSettings.fgAOInfluence");
+		SerializedProperty fgAOContrast = serializedConfig.FindProperty ("config.giSettings.fgAOContrast");
+		SerializedProperty fgAOMaxDistance = serializedConfig.FindProperty ("config.giSettings.fgAOMaxDistance");
+		SerializedProperty fgAOScale = serializedConfig.FindProperty ("config.giSettings.fgAOScale");
+		SerializedProperty fgPreview = serializedConfig.FindProperty ("config.giSettings.fgPreview");
+		SerializedProperty fgUseCache = serializedConfig.FindProperty ("config.giSettings.fgUseCache");
+		SerializedProperty fgCacheDirectLight = serializedConfig.FindProperty ("config.giSettings.fgCacheDirectLight");
 		
-		if (isPrimaryIntegrator && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
-			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
-		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
-			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
+		if (isPrimaryIntegrator && sc.config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
+			sc.config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
+		else if (!isPrimaryIntegrator && sc.config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.FinalGather)
+			sc.config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.FinalGather;
 
 		// Bounces
 		
@@ -585,10 +585,10 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.Label ("Attenuation", EditorStyles.boldLabel);
 		EditorGUILayout.PropertyField (fgAttenuationStart, new GUIContent ("Attenuation Start", "The distance between which attenuation begins and fades to zero. There is no attenuation before this range, and no intensity beyond it. If zero, there will be no attenuation."));
 		EditorGUILayout.PropertyField (fgAttenuationStop, new GUIContent ("Attenuation Stop", "The distance between which attenuation begins and fades to zero. There is no attenuation before this range, and no intensity beyond it. If zero, there will be no attenuation."));
-		if (config.giSettings.fgAttenuationStop == 0)
+		if (sc.config.giSettings.fgAttenuationStop == 0)
 			GUI.enabled = false;
 		EditorGUILayout.PropertyField (fgFalloffExponent, new GUIContent ("Falloff Exponent", "This can be used to adjust the rate by which lighting falls off by distance. A higher exponent gives a faster falloff. Note that fgAttenuationStop must be set higher than 0.0 to enable attenuation."));
-		if (config.giSettings.enableGI)
+		if (sc.config.giSettings.enableGI)
 			GUI.enabled = true;
 		EditorGUI.indentLevel--;
 
@@ -612,15 +612,15 @@ public class LMExtendedWindow : EditorWindow
 		// Visualize AO is not available as of Unity 4.0
 //		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
 		EditorGUILayout.Slider (fgAOInfluence, 0, 1, new GUIContent ("Influence", "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution."));
-		LightmapEditorSettings.aoAmount = config.giSettings.fgAOInfluence;
-		if (config.giSettings.fgAOInfluence <= 0)
+		LightmapEditorSettings.aoAmount = sc.config.giSettings.fgAOInfluence;
+		if (sc.config.giSettings.fgAOInfluence <= 0)
 			GUI.enabled = false;
 		EditorGUILayout.Slider (fgAOContrast, 0, 2, new GUIContent ("Contrast", "Can be used to adjust the contrast for ambient occlusion."));
-		LightmapEditorSettings.aoContrast = config.giSettings.fgAOContrast;
+		LightmapEditorSettings.aoContrast = sc.config.giSettings.fgAOContrast;
 		EditorGUILayout.PropertyField (fgAOMaxDistance, new GUIContent ("Max Distance", "Max distance for the occlusion. Beyond this distance a ray is considered to be visible. Can be used to avoid full occlusion for closed scenes."));
-		LightmapEditorSettings.aoMaxDistance = config.giSettings.fgAOMaxDistance;
+		LightmapEditorSettings.aoMaxDistance = sc.config.giSettings.fgAOMaxDistance;
 		EditorGUILayout.PropertyField (fgAOScale, new GUIContent ("Scale", "A scaling of the occlusion values. Can be used to increase or decrease the shadowing effect."));
-		if (config.giSettings.enableGI)
+		if (sc.config.giSettings.enableGI)
 			GUI.enabled = true;
 
 		// Performance
@@ -633,21 +633,21 @@ public class LMExtendedWindow : EditorWindow
 	
 	void PathTracerSettings (SerializedObject serializedConfig, bool isPrimaryIntegrator)
 	{
-		SerializedProperty ptDepth = serializedConfig.FindProperty ("giSettings.ptDepth");
-		SerializedProperty ptAccuracy = serializedConfig.FindProperty ("giSettings.ptAccuracy");
-		SerializedProperty ptPointSize = serializedConfig.FindProperty ("giSettings.ptPointSize");
-		SerializedProperty ptNormalThreshold = serializedConfig.FindProperty ("giSettings.ptNormalThreshold");
-		SerializedProperty ptFilterType = serializedConfig.FindProperty ("giSettings.ptFilterType");
-		SerializedProperty ptFilterSize = serializedConfig.FindProperty ("giSettings.ptFilterSize");
-		SerializedProperty ptCheckVisibility = serializedConfig.FindProperty ("giSettings.ptCheckVisibility");
-		SerializedProperty ptPreview = serializedConfig.FindProperty ("giSettings.ptPreview");
-		SerializedProperty ptCacheDirectLight = serializedConfig.FindProperty ("giSettings.ptCacheDirectLight");
-		SerializedProperty ptPrecalcIrradiance = serializedConfig.FindProperty ("giSettings.ptPrecalcIrradiance");
+		SerializedProperty ptDepth = serializedConfig.FindProperty ("config.giSettings.ptDepth");
+		SerializedProperty ptAccuracy = serializedConfig.FindProperty ("config.giSettings.ptAccuracy");
+		SerializedProperty ptPointSize = serializedConfig.FindProperty ("config.giSettings.ptPointSize");
+		SerializedProperty ptNormalThreshold = serializedConfig.FindProperty ("config.giSettings.ptNormalThreshold");
+		SerializedProperty ptFilterType = serializedConfig.FindProperty ("config.giSettings.ptFilterType");
+		SerializedProperty ptFilterSize = serializedConfig.FindProperty ("config.giSettings.ptFilterSize");
+		SerializedProperty ptCheckVisibility = serializedConfig.FindProperty ("config.giSettings.ptCheckVisibility");
+		SerializedProperty ptPreview = serializedConfig.FindProperty ("config.giSettings.ptPreview");
+		SerializedProperty ptCacheDirectLight = serializedConfig.FindProperty ("config.giSettings.ptCacheDirectLight");
+		SerializedProperty ptPrecalcIrradiance = serializedConfig.FindProperty ("config.giSettings.ptPrecalcIrradiance");
 		
-		if (isPrimaryIntegrator && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
-			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
-		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
-			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
+		if (isPrimaryIntegrator && sc.config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
+			sc.config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
+		else if (!isPrimaryIntegrator && sc.config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
+			sc.config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 
 		EditorGUILayout.IntSlider (ptDepth, 0, 20, new GUIContent ("Bounces", ""));
 		EditorGUILayout.PropertyField (ptAccuracy, new GUIContent ("Accuracy", "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality."));
@@ -673,14 +673,14 @@ public class LMExtendedWindow : EditorWindow
 
 	void MonteCarloSettings (SerializedObject serializedConfig, bool isPrimaryIntegrator)
 	{
-		SerializedProperty mcDepth = serializedConfig.FindProperty ("giSettings.mcDepth");
-		SerializedProperty mcRays = serializedConfig.FindProperty ("giSettings.mcRays");
-		SerializedProperty mcMaxRayLength = serializedConfig.FindProperty ("giSettings.mcMaxRayLength");
+		SerializedProperty mcDepth = serializedConfig.FindProperty ("config.giSettings.mcDepth");
+		SerializedProperty mcRays = serializedConfig.FindProperty ("config.giSettings.mcRays");
+		SerializedProperty mcMaxRayLength = serializedConfig.FindProperty ("config.giSettings.mcMaxRayLength");
 		
-		if (isPrimaryIntegrator && config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
-			config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
-		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
-			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
+		if (isPrimaryIntegrator && sc.config.giSettings.primaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
+			sc.config.giSettings.primaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
+		else if (!isPrimaryIntegrator && sc.config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
+			sc.config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
 
 		EditorGUILayout.IntSlider (mcDepth, 1, 20, new GUIContent ("Bounces", "Sets the number of indirect light bounces calculated by monte carlo."));
 		EditorGUILayout.PropertyField (mcRays, new GUIContent ("Rays", "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time."));
@@ -689,33 +689,33 @@ public class LMExtendedWindow : EditorWindow
 
 	void EnvironmentGUI (SerializedObject serializedConfig)
 	{
-		SerializedProperty giEnvironment = serializedConfig.FindProperty ("environmentSettings.giEnvironment");
-		SerializedProperty giEnvironmentIntensity = serializedConfig.FindProperty ("environmentSettings.giEnvironmentIntensity");
-		SerializedProperty iblImageFile = serializedConfig.FindProperty ("environmentSettings.iblImageFile");
-		SerializedProperty iblSwapYZ = serializedConfig.FindProperty ("environmentSettings.iblSwapYZ");
-		SerializedProperty iblTurnDome = serializedConfig.FindProperty ("environmentSettings.iblTurnDome");
-		SerializedProperty iblGIEnvBlur = serializedConfig.FindProperty ("environmentSettings.iblGIEnvBlur");
-		SerializedProperty iblEmitLight = serializedConfig.FindProperty ("environmentSettings.iblEmitLight");
-		SerializedProperty iblSamples = serializedConfig.FindProperty ("environmentSettings.iblSamples");
-		SerializedProperty iblIntensity = serializedConfig.FindProperty ("environmentSettings.iblIntensity");
-		SerializedProperty iblEmitDiffuse = serializedConfig.FindProperty ("environmentSettings.iblEmitDiffuse");
-		SerializedProperty iblEmitSpecular = serializedConfig.FindProperty ("environmentSettings.iblEmitSpecular");
-		SerializedProperty iblSpecularBoost = serializedConfig.FindProperty ("environmentSettings.iblSpecularBoost");
-		SerializedProperty iblShadows = serializedConfig.FindProperty ("environmentSettings.iblShadows");
-		SerializedProperty iblBandingVsNoise = serializedConfig.FindProperty ("environmentSettings.iblBandingVsNoise");
+		SerializedProperty giEnvironment = serializedConfig.FindProperty ("config.environmentSettings.giEnvironment");
+		SerializedProperty giEnvironmentIntensity = serializedConfig.FindProperty ("config.environmentSettings.giEnvironmentIntensity");
+		SerializedProperty iblImageFile = serializedConfig.FindProperty ("config.environmentSettings.iblImageFile");
+		SerializedProperty iblSwapYZ = serializedConfig.FindProperty ("config.environmentSettings.iblSwapYZ");
+		SerializedProperty iblTurnDome = serializedConfig.FindProperty ("config.environmentSettings.iblTurnDome");
+		SerializedProperty iblGIEnvBlur = serializedConfig.FindProperty ("config.environmentSettings.iblGIEnvBlur");
+		SerializedProperty iblEmitLight = serializedConfig.FindProperty ("config.environmentSettings.iblEmitLight");
+		SerializedProperty iblSamples = serializedConfig.FindProperty ("config.environmentSettings.iblSamples");
+		SerializedProperty iblIntensity = serializedConfig.FindProperty ("config.environmentSettings.iblIntensity");
+		SerializedProperty iblEmitDiffuse = serializedConfig.FindProperty ("config.environmentSettings.iblEmitDiffuse");
+		SerializedProperty iblEmitSpecular = serializedConfig.FindProperty ("config.environmentSettings.iblEmitSpecular");
+		SerializedProperty iblSpecularBoost = serializedConfig.FindProperty ("config.environmentSettings.iblSpecularBoost");
+		SerializedProperty iblShadows = serializedConfig.FindProperty ("config.environmentSettings.iblShadows");
+		SerializedProperty iblBandingVsNoise = serializedConfig.FindProperty ("config.environmentSettings.iblBandingVsNoise");
 		
 		EditorGUILayout.PropertyField (giEnvironment, new GUIContent ("Environment Type", ""));
 		
-		EditorGUI.BeginDisabledGroup (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None);
+		EditorGUI.BeginDisabledGroup (sc.config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.None);
 
 		EditorGUI.indentLevel++;
 
 		EditorGUILayout.PropertyField (giEnvironmentIntensity, new GUIContent ("Intensity", ""));
 
-		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
+		if (sc.config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.SkyLight) {
 			// FIXME add undo
-			LMColorPicker ("Sky Light Color", ref config.environmentSettings.skyLightColor, "It is often a good idea to keep the color below 1.0 in intensity to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.");
-		} else if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
+			LMColorPicker ("Sky Light Color", ref sc.config.environmentSettings.skyLightColor, "It is often a good idea to keep the color below 1.0 in intensity to avoid boosting by gamma correction. Boost the intensity instead with the giEnvironmentIntensity setting.");
+		} else if (sc.config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
 			GUILayout.Label ("IBL Image", EditorStyles.boldLabel);
 			EditorGUILayout.PrefixLabel (new GUIContent ("Image Path", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
 			GUILayout.BeginHorizontal ();
@@ -727,12 +727,12 @@ public class LMExtendedWindow : EditorWindow
 			GUILayout.BeginHorizontal ();
 			{
 				GUILayout.FlexibleSpace ();
-				if (!string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
+				if (!string.IsNullOrEmpty (sc.config.environmentSettings.iblImageFile)) {
 					if (GUILayout.Button ("Reveal", GUILayout.Width (54))) {
-						EditorUtility.OpenWithDefaultApp (Path.GetDirectoryName (config.environmentSettings.iblImageFile));
+						EditorUtility.OpenWithDefaultApp (Path.GetDirectoryName (sc.config.environmentSettings.iblImageFile));
 					}
 					if (GUILayout.Button ("Edit", GUILayout.Width (54))) {
-						EditorUtility.OpenWithDefaultApp (config.environmentSettings.iblImageFile);
+						EditorUtility.OpenWithDefaultApp (sc.config.environmentSettings.iblImageFile);
 					}
 					GUILayout.Space (8);
 				}
@@ -741,7 +741,7 @@ public class LMExtendedWindow : EditorWindow
 					string ext = Path.GetExtension (file);
 					if (!string.IsNullOrEmpty (file)) {
 						if (ext == ".exr" || ext == ".hdr") {
-							config.environmentSettings.iblImageFile = file;
+							sc.config.environmentSettings.iblImageFile = file;
 							iblImageFile.stringValue = file;
 							GUI.changed = true;
 							Repaint ();
@@ -761,12 +761,12 @@ public class LMExtendedWindow : EditorWindow
 			GUILayout.Label ("IBL Light", EditorStyles.boldLabel);
 			
 			EditorGUILayout.PropertyField (iblEmitLight, new GUIContent ("Emit Light", "Turns on the expensive IBL implementation. This will generate a number of (iblSamples) directional lights from the image."));
-			if (config.environmentSettings.iblEmitLight)
+			if (sc.config.environmentSettings.iblEmitLight)
 				EditorGUILayout.HelpBox ("The scene will be lit by a number of directional lights with colors sampled from the IBL image. Very expensive.", MessageType.None);
 			else
 				EditorGUILayout.HelpBox ("The scene will be lit with Global Illumination using the IBL image as a simple environment.", MessageType.None);
 			
-			EditorGUI.BeginDisabledGroup (!config.environmentSettings.iblEmitLight);
+			EditorGUI.BeginDisabledGroup (!sc.config.environmentSettings.iblEmitLight);
 			{
 				EditorGUILayout.PropertyField (iblSamples, new GUIContent ("Samples", "The number of samples to be taken from the image. This will affect how soft the shadows will be, as well as the general lighting. The higher number of samples, the better the shadows and lighting."));
 				EditorGUILayout.PropertyField (iblIntensity, new GUIContent ("IBL Intensity", "Sets the intensity of the lighting."));
@@ -774,20 +774,20 @@ public class LMExtendedWindow : EditorWindow
 				EditorGUILayout.PropertyField (iblEmitSpecular, new GUIContent ("Specular", "To remove specular highlights from IBL, set this to false."));
 				EditorGUI.indentLevel++;
 				{
-					if (!config.environmentSettings.iblEmitSpecular)
+					if (!sc.config.environmentSettings.iblEmitSpecular)
 						GUI.enabled = false;
 					EditorGUILayout.PropertyField (iblSpecularBoost, new GUIContent ("Specular Boost", "Further tweak the intensity by boosting the specular component."));
-					if (config.environmentSettings.iblEmitLight)
+					if (sc.config.environmentSettings.iblEmitLight)
 						GUI.enabled = true;
 				}
 				EditorGUI.indentLevel--;
 				EditorGUILayout.PropertyField (iblShadows, new GUIContent ("Shadows", "Controls whether shadows should be created from IBL when this is used."));
 				{
 					EditorGUI.indentLevel++;
-					if (!config.environmentSettings.iblShadows)
+					if (!sc.config.environmentSettings.iblShadows)
 						GUI.enabled = false;
 					EditorGUILayout.PropertyField (iblBandingVsNoise, new GUIContent ("Shadow Noise", "Controls the appearance of the shadows, banded shadows look more aliased, but noisy shadows flicker more in animations."));
-					if (config.environmentSettings.iblEmitLight)
+					if (sc.config.environmentSettings.iblEmitLight)
 						GUI.enabled = true;
 				}
 				EditorGUI.indentLevel--;
@@ -803,8 +803,8 @@ public class LMExtendedWindow : EditorWindow
 	
 	void TextureBakeGUI (SerializedObject serializedConfig)
 	{
-		SerializedProperty bilinearFilter = serializedConfig.FindProperty ("textureBakeSettings.bilinearFilter");
-		SerializedProperty conservativeRasterization = serializedConfig.FindProperty ("textureBakeSettings.conservativeRasterization");
+		SerializedProperty bilinearFilter = serializedConfig.FindProperty ("config.textureBakeSettings.bilinearFilter");
+		SerializedProperty conservativeRasterization = serializedConfig.FindProperty ("config.textureBakeSettings.conservativeRasterization");
 		
 		GUILayout.Label ("Texture", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
@@ -923,12 +923,12 @@ public class LMExtendedWindow : EditorWindow
 	
 	bool CheckSettingsIntegrity ()
 	{
-		if (config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
-			if (string.IsNullOrEmpty (config.environmentSettings.iblImageFile)) {
+		if (sc.config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
+			if (string.IsNullOrEmpty (sc.config.environmentSettings.iblImageFile)) {
 				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but no IBL image file is available. Either change the environment type or specify an HDR or EXR image file path.", "Ok");
 				Debug.LogError ("Lightmapping cancelled, environment type set to IBL but no IBL image file was specified.");
 				return false;
-			} else if (!File.Exists (config.environmentSettings.iblImageFile)) {
+			} else if (!File.Exists (sc.config.environmentSettings.iblImageFile)) {
 				EditorUtility.DisplayDialog ("Missing IBL image", "The lightmapping environment type is set to IBL, but there is no compatible image file at the specified path. Either change the environment type or specify an absolute path to an HDR or EXR image file.", "Ok");
 				Debug.LogError ("Lightmapping cancelled, environment type set to IBL but the absolute path to an IBL image is incorrect.");
 				return false;

@@ -25,7 +25,7 @@ using System.IO;
 
 
 [System.Serializable]
-public class ILConfig : ScriptableObject
+public class ILConfig
 {
 	public enum ShadowDepth
 	{
