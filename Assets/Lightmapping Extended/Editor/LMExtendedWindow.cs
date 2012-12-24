@@ -503,8 +503,6 @@ public class LMExtendedWindow : EditorWindow
 
 	void IntegratorSettings (SerializedObject serializedObject, ILConfig.GISettings.Integrator integrator, bool isPrimary)
 	{
-//		EditorGUI.indentLevel++;
-
 		if (integrator != ILConfig.GISettings.Integrator.None) {
 			if (isPrimary) {
 				SerializedProperty primaryIntensity = serializedObject.FindProperty ("giSettings.primaryIntensity");
@@ -536,7 +534,6 @@ public class LMExtendedWindow : EditorWindow
 			MonteCarloSettings (serializedObject, isPrimary);
 			break;
 		}
-//		EditorGUI.indentLevel--;
 	}
 	
 	void FinalGatherSettings (SerializedObject serializedConfig, bool isPrimaryIntegrator)
@@ -572,7 +569,7 @@ public class LMExtendedWindow : EditorWindow
 		
 		GUILayout.Label ("Bounces", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		IntSlider (fgDepth, 1, 10, new GUIContent ("Bounces", "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used."));
+		EditorGUILayout.IntSlider (fgDepth, 1, 10, new GUIContent ("Bounces", "Sets the number of indirect light bounces calculated by final gather. A value higher than 1 will produce more global illumination effects, but note that it can be quite slow since the number of rays will increase exponentially with the depth. It's often better to use a fast method for secondary GI. If a secondary GI is used the number of set final gather bounces will be calculated first, before the secondary GI is called. So in most cases the depth should be set to 1 if a secondary GI is used."));
 		EditorGUILayout.PropertyField (diffuseBoost, new GUIContent ("Bounce Boost", "This setting can be used to exaggerate light bouncing in dark scenes. Setting it to a value larger than 1 will push the diffuse color of materials towards 1 for GI computations. The typical use case is scenes authored with dark materials, this happens easily when doing only direct lighting since it's easy to compensate dark materials with strong light sources. Indirect light will be very subtle in these scenes since the bounced light will fade out quickly. Setting a diffuse boost will compensate for this. Note that values between 0 and 1 will decrease the diffuse setting in a similar way making light bounce less than the materials says, values below 0 is invalid. The actual computation taking place is a per component pow(colorComponent, (1.0 / diffuseBoost))."));
 		EditorGUI.indentLevel--;
 
@@ -599,8 +596,8 @@ public class LMExtendedWindow : EditorWindow
 
 		GUILayout.Label ("Points", EditorStyles.boldLabel);
 		EditorGUI.indentLevel++;
-		IntSlider (fgInterpolationPoints, 1, 40, new GUIContent ("Interpolation Points", "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below."));
-		IntSlider (fgEstimatePoints, 1, 40, new GUIContent ("Estimate Points", "Sets the minimum number of points that should be used when estimating final gather in the pre calculation pass. The impact is that a higher value will create more points all over the scene. The default value 15 rarely needs to be adjusted."));
+		EditorGUILayout.IntSlider (fgInterpolationPoints, 1, 40, new GUIContent ("Interpolation Points", "Sets the number of final gather points to interpolate between. A higher value will give a smoother result, but can also smooth out details. If light leakage is introduced through walls when this value is increased, checking the sample visibility solves that problem, see fgCheckVisibility below."));
+		EditorGUILayout.IntSlider (fgEstimatePoints, 1, 40, new GUIContent ("Estimate Points", "Sets the minimum number of points that should be used when estimating final gather in the pre calculation pass. The impact is that a higher value will create more points all over the scene. The default value 15 rarely needs to be adjusted."));
 		EditorGUILayout.PropertyField (fgCheckVisibility, new GUIContent ("Check Visibility", "Turn this on to reduce light leakage through walls. When points are collected to interpolate between, some of them can be located on the other side of geometry. As a result light will bleed through the geometry. So to prevent this Beast can reject points that are not visible."));
 		EditorGUILayout.PropertyField (fgContrastThreshold, new GUIContent ("Contrast Threshold", "Controls how sensitive the final gather should be for contrast differences between the points during pre calculation. If the contrast difference is above this threshold for neighbouring points, more points will be created in that area. This tells the algorithm to place points where they are really needed, e.g. at shadow boundaries or in areas where the indirect light changes quickly. Hence this threshold controls the number of points created in the scene adaptively. Note that if a low number of final gather rays are used, the points will have high variance and hence a high contrast difference, so in that case you might need to increase the contrast threshold to prevent points from clumping together."));
 		EditorGUILayout.PropertyField (fgGradientThreshold, new GUIContent ("Gradient Threshold", "Controls how the irradiance gradient is used in the interpolation. Each point stores it's irradiance gradient which can be used to improve the interpolation. However in some situations using the gradient can result in white 'halos' and other artifacts. This threshold can be used to reduce those artifacts."));
@@ -614,11 +611,11 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.indentLevel++;
 		// Visualize AO is not available as of Unity 4.0
 //		Toggle ("Visualize AO", ref config.giSettings.fgAOVisualize, "Visualize just the ambient occlusion values. Useful when tweaking the occlusion sampling options.");
-		Slider (fgAOInfluence, 0, 1, new GUIContent ("Influence", "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution."));
+		EditorGUILayout.Slider (fgAOInfluence, 0, 1, new GUIContent ("Influence", "Controls a scaling of Final Gather with Ambient Occlusion which can be used to boost shadowing and get more contrast in you lighting. The value controls how much Ambient Occlusion to blend into the Final Gather solution."));
 		LightmapEditorSettings.aoAmount = config.giSettings.fgAOInfluence;
 		if (config.giSettings.fgAOInfluence <= 0)
 			GUI.enabled = false;
-		Slider (fgAOContrast, 0, 2, new GUIContent ("Contrast", "Can be used to adjust the contrast for ambient occlusion."));
+		EditorGUILayout.Slider (fgAOContrast, 0, 2, new GUIContent ("Contrast", "Can be used to adjust the contrast for ambient occlusion."));
 		LightmapEditorSettings.aoContrast = config.giSettings.fgAOContrast;
 		EditorGUILayout.PropertyField (fgAOMaxDistance, new GUIContent ("Max Distance", "Max distance for the occlusion. Beyond this distance a ray is considered to be visible. Can be used to avoid full occlusion for closed scenes."));
 		LightmapEditorSettings.aoMaxDistance = config.giSettings.fgAOMaxDistance;
@@ -652,7 +649,7 @@ public class LMExtendedWindow : EditorWindow
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.PathTracer)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.PathTracer;
 
-		IntSlider (ptDepth, 0, 20, new GUIContent ("Bounces", ""));
+		EditorGUILayout.IntSlider (ptDepth, 0, 20, new GUIContent ("Bounces", ""));
 		EditorGUILayout.PropertyField (ptAccuracy, new GUIContent ("Accuracy", "Sets the number of paths that are traced for each sample element (pixel, texel or vertex). For preview renderings, you can use a low value like 0.5 or 0.1, which means that half of the pixels or 1/10 of the pixels will generate a path. For production renderings you can use values above 1.0, if needed to get good quality."));
 		// ptDefaultColor has no apparent effect as of Unity 4.0
 //		LMColorPicker ("Default Color", ref config.giSettings.ptDefaultColor, "");
@@ -685,7 +682,7 @@ public class LMExtendedWindow : EditorWindow
 		else if (!isPrimaryIntegrator && config.giSettings.secondaryIntegrator != ILConfig.GISettings.Integrator.MonteCarlo)
 			config.giSettings.secondaryIntegrator = ILConfig.GISettings.Integrator.MonteCarlo;
 
-		IntSlider (mcDepth, 1, 20, new GUIContent ("Bounces", "Sets the number of indirect light bounces calculated by monte carlo."));
+		EditorGUILayout.IntSlider (mcDepth, 1, 20, new GUIContent ("Bounces", "Sets the number of indirect light bounces calculated by monte carlo."));
 		EditorGUILayout.PropertyField (mcRays, new GUIContent ("Rays", "Sets the number of rays to use for each calculation. A higher number gives higher quality, but longer rendering time."));
 		EditorGUILayout.PropertyField (mcMaxRayLength, new GUIContent ("Ray Length", "The max distance a ray can be traced before it's considered to be a 'miss'. This can improve performance in very large scenes. If the value is set to 0.0 the entire scene will be used."));
 	}
@@ -758,7 +755,7 @@ public class LMExtendedWindow : EditorWindow
 			}
 			GUILayout.EndHorizontal ();
 			EditorGUILayout.PropertyField (iblSwapYZ, new GUIContent ("Swap Y/Z", "Swap the Up Axis. Default value is false, meaning that Y is up."));
-			Slider (iblTurnDome, 0, 360, new GUIContent ("Dome Rotation", "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0."));
+			EditorGUILayout.Slider (iblTurnDome, 0, 360, new GUIContent ("Dome Rotation", "The sphere that the image is projected on can be rotated around the up axis. The amount of rotation is given in degrees. Default value is 0.0."));
 			EditorGUILayout.PropertyField (iblGIEnvBlur, new GUIContent ("Blur", "Pre-blur the environment image for Global Illumination calculations. Can help to reduce noise and flicker in images rendered with Final Gather. May increase render time as it is blurred at render time. It is always cheaper to pre-blur the image itself in an external application before loading it into Beast."));
 
 			GUILayout.Label ("IBL Light", EditorStyles.boldLabel);
@@ -942,60 +939,11 @@ public class LMExtendedWindow : EditorWindow
 	
 	#endregion
 	
-	
-	#region GUI Elements
-	
 	private void LMColorPicker (string name, ref ILConfig.LMColor color, string tooltip)
 	{
 		Color c = EditorGUILayout.ColorField (new GUIContent (name, tooltip), new Color (color.r, color.g, color.b, color.a));
 		color = new ILConfig.LMColor (c.r, c.g, c.b, c.a);
 	}
-
-	private void Slider (SerializedProperty val, float min, float max, GUIContent content)
-	{
-		EditorGUILayout.Slider (val, min, max, content);
-	}
-	
-	private void Toggle (string name, ref bool val, string tooltip)
-	{
-		val = EditorGUILayout.Toggle (new GUIContent (name, tooltip), val);
-	}
-	
-	private void FloatField (string name, ref float val, string tooltip)
-	{
-		val = EditorGUILayout.FloatField (new GUIContent (name, tooltip), val);
-	}
-	
-	private void IntField (string name, ref int val, string tooltip)
-	{
-		val = EditorGUILayout.IntField (new GUIContent (name, tooltip), val);
-	}
-
-	private void IntSlider (SerializedProperty val, int min, int max, GUIContent content)
-	{
-		EditorGUILayout.IntSlider (val, min, max, content);
-	}
-
-//	private void MinMaxField (SerializedProperty min, SerializedProperty max, GUIContent content)
-//	{
-//		GUILayout.BeginHorizontal ();
-//		GUILayout.Space (15 * EditorGUI.indentLevel);
-//		GUILayout.Label (content);
-//		EditorGUILayout.PropertyField (min, new GUIContent (""), GUILayout.Width (30));
-//		if (min.floatValue < 0)
-//			min.floatValue = 0;
-//		if (min.floatValue > max.floatValue)
-//			max.floatValue = min.floatValue;
-//		EditorGUILayout.PropertyField (max, new GUIContent (""), GUILayout.Width (30));
-//		if (max.floatValue < 0)
-//			max.floatValue = 0;
-//		if (max.floatValue < min.floatValue)
-//			min.floatValue = max.floatValue;
-//		GUILayout.EndHorizontal ();
-//	}
-	
-	#endregion
-	
 }
 
 
