@@ -484,6 +484,7 @@ public class LMExtendedWindow : EditorWindow
 
 		if (sc.config.giSettings.primaryIntegrator == ILConfig.GISettings.Integrator.FinalGather && sc.config.giSettings.secondaryIntegrator == ILConfig.GISettings.Integrator.PathTracer) {
 			EditorGUILayout.Space ();
+			GUILayout.Label ("Final Gather & Path Tracer Blending", EditorStyles.boldLabel);
 			EditorGUILayout.PropertyField (fgLightLeakReduction, new GUIContent ("Light Leak Reduction", "This setting can be used to reduce light leakage through walls when using final gather as primary GI and path tracing as secondary GI. Leakage, which can happen when e.g. the path tracer filters in values on the other side of a wall, is reduced by using final gather as a secondary GI fallback when sampling close to walls or corners. When this is enabled a final gather depth of 3 will be used automatically, but the higher depths will only be used close to walls or corners. Note that this is only used when path tracing is set as secondary GI."));
 			if (!sc.config.giSettings.fgLightLeakReduction)
 				GUI.enabled = false;
@@ -724,25 +725,19 @@ public class LMExtendedWindow : EditorWindow
 		} else if (sc.config.environmentSettings.giEnvironment == ILConfig.EnvironmentSettings.Environment.IBL) {
 			GUILayout.Label ("IBL Image", EditorStyles.boldLabel);
 			EditorGUILayout.PrefixLabel (new GUIContent ("Image Path", "The absolute image file path to use for IBL. Accepts hdr or OpenEXR format. The file should be long-lat. Use giEnvironmentIntensity to boost the intensity of the image."));
-			GUILayout.BeginHorizontal ();
-			{
-				GUILayout.Space (22);
-				EditorGUILayout.PropertyField (iblImageFile, new GUIContent (""));
-			}
-			GUILayout.EndHorizontal ();
+			EditorGUILayout.PropertyField (iblImageFile, new GUIContent (""));
 			GUILayout.BeginHorizontal ();
 			{
 				GUILayout.FlexibleSpace ();
 				if (!string.IsNullOrEmpty (sc.config.environmentSettings.iblImageFile)) {
-					if (GUILayout.Button ("Reveal", GUILayout.Width (54))) {
+					if (GUILayout.Button ("Reveal", GUILayout.Width (55))) {
 						EditorUtility.OpenWithDefaultApp (Path.GetDirectoryName (sc.config.environmentSettings.iblImageFile));
 					}
-					if (GUILayout.Button ("Edit", GUILayout.Width (54))) {
+					if (GUILayout.Button ("Edit", GUILayout.Width (55))) {
 						EditorUtility.OpenWithDefaultApp (sc.config.environmentSettings.iblImageFile);
 					}
-					GUILayout.Space (8);
 				}
-				if (GUILayout.Button ("Choose", GUILayout.Width (54))) {
+				if (GUILayout.Button ("Choose", GUILayout.Width (55))) {
 					string file = EditorUtility.OpenFilePanel ("Select EXR or HDR file", "", "");
 					string ext = Path.GetExtension (file);
 					if (!string.IsNullOrEmpty (file)) {
