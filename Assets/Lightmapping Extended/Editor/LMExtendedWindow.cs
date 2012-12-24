@@ -30,14 +30,20 @@ public class LMExtendedWindow : EditorWindow
 {
 	const string assetFolderName = "Lightmapping Extended";
 	
-	public SerializedConfig sc;
+	private SerializedConfig _sc;
+	public SerializedConfig sc {
+		get {
+			if (_sc == null)
+				_sc = ScriptableObject.CreateInstance<SerializedConfig> ();
+			return _sc;
+		}
+	}
 
 	[MenuItem ("Window/Lightmapping Extended", false, 2098)]
 	static void Init ()
 	{
 		var window = EditorWindow.GetWindow<LMExtendedWindow> (false, "LM Extended");
 		window.autoRepaintOnSceneChange = true;
-		window.sc = ScriptableObject.CreateInstance<SerializedConfig> ();
 	}
 	
 	#region Configuration
@@ -102,7 +108,7 @@ public class LMExtendedWindow : EditorWindow
 	{
 		string path = ConfigFilePath;
 		if (string.IsNullOrEmpty (path)) {
-			GUILayout.Label ("Open a scene file to edit lightmap settings");
+			EditorGUILayout.HelpBox ("Open a scene file to edit its lightmapping settings.", MessageType.Info);
 			return;
 		}
 		
