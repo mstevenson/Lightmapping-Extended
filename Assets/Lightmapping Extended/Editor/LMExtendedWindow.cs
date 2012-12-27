@@ -892,10 +892,8 @@ public class LMExtendedWindow : EditorWindow
 	
 	void BakeDropDownCallback (object data)
 	{
-		if (CheckSettingsIntegrity ()) {	
-			bakeMode = (BakeMode)data;
-			DoBake ();
-		}
+		bakeMode = (BakeMode)data;
+		DoBake ();
 	}
 	
 	BakeMode bakeMode {
@@ -909,6 +907,9 @@ public class LMExtendedWindow : EditorWindow
 	
 	void DoBake ()
 	{
+		if (!CheckSettingsIntegrity ())
+			return;
+
 		switch (bakeMode) {
 		case BakeMode.BakeScene:
 			Lightmapping.BakeAsync ();
