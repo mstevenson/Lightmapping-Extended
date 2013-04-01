@@ -5,8 +5,6 @@ Lightmapping Extended
 
 The most notable additions to Unity's built-in lightmapping settings are **image-based lighting**, **Path Tracer GI**, and **Monte Carlo GI**.
 
-A Cornell Box scene is included for testing. The scene was created by Kristen Schat of iKriz Media (http://www.ikriz.nl/2010/11/11/unity3d-cornell-box)
-
 Installation
 ------------
 
