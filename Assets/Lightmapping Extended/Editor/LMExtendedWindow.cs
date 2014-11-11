@@ -30,11 +30,13 @@ public class LMExtendedWindow : EditorWindow
 {
 	const string assetFolderName = "Lightmapping Extended";
 	
-	private SerializedConfig _sc;
+	SerializedConfig _sc;
 	public SerializedConfig sc {
 		get {
-			if (_sc == null)
+			if (_sc == null) {
 				_sc = ScriptableObject.CreateInstance<SerializedConfig> ();
+				_sc.hideFlags = HideFlags.DontSave;
+			}
 			return _sc;
 		}
 	}
@@ -145,7 +147,8 @@ public class LMExtendedWindow : EditorWindow
 		PresetSelectionGUI ();
 		
 		EditorGUILayout.Space ();
-		
+
+		// Draw tabs
 		int lastSelected = toolbarSelected;
 		toolbarSelected = GUILayout.Toolbar (toolbarSelected, new string[] {"Settings", "Global Illum", "Environment"});
 		// Prevent text fields from grabbing focus when switching tabs
@@ -155,6 +158,7 @@ public class LMExtendedWindow : EditorWindow
 		
 		EditorGUILayout.Space ();
 
+		// Draw main GUI
 		scroll = EditorGUILayout.BeginScrollView (scroll);
 		{
 			SerializedObject configObj = new SerializedObject (sc);
@@ -239,7 +243,7 @@ public class LMExtendedWindow : EditorWindow
 		GUILayout.EndHorizontal ();
 	}
 	
-	private string PresetsPopup (string presetString)
+	string PresetsPopup (string presetString)
 	{
 		List<string> presets = new List<string> (GetPresetNames ());
 		int presetIndex = presets.IndexOf (presetString);
@@ -629,13 +633,16 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUILayout.PropertyField (fgAOScale, new GUIContent ("Scale", "A scaling of the occlusion values. Can be used to increase or decrease the shadowing effect."));
 		if (sc.config.giSettings.enableGI)
 			GUI.enabled = true;
+		EditorGUI.indentLevel--;
 
 		// Performance
 
 		GUILayout.Label ("Performance", EditorStyles.boldLabel);
+		EditorGUI.indentLevel++;
 		EditorGUILayout.PropertyField (fgPreview, new GUIContent ("Fast Preview", "Turn this on to visualize the final gather prepass. Using the Preview Calculation Pass enables a quick preview of the final image lighting, reducing lighting setup time."));
 		EditorGUILayout.PropertyField (fgUseCache, new GUIContent ("Use Cache", "Selects what caching method to use for final gathering."));
 		EditorGUILayout.PropertyField (fgCacheDirectLight, new GUIContent ("Cache Direct Light", "When this is enabled final gather will also cache lighting from light sources. This increases performance since fewer direct light calculations are needed. It gives an approximate result, and hence can affect the quality of the lighting. For instance indirect light bounces from specular highlights might be lost. However this caching is only done for depths higher than 1, so the quality of direct light and shadows in the light map will not be reduced."));
+		EditorGUI.indentLevel--;
 	}
 	
 	void PathTracerSettings (SerializedObject serializedConfig, bool isPrimaryIntegrator)
@@ -844,7 +851,11 @@ public class LMExtendedWindow : EditorWindow
 	void BakeButtonsGUI ()
 	{
 		float width = 120;
+#if UNITY_5_0
+		bool disabled = LightmapSettings.lightmapsMode == LightmapsMode.SeparateDirectional && !InternalEditorUtility.HasPro ();
+#else
 		bool disabled = LightmapSettings.lightmapsMode == LightmapsMode.Directional && !InternalEditorUtility.HasPro ();
+#endif
 		EditorGUI.BeginDisabledGroup (disabled);
 		{
 			GUILayout.BeginHorizontal ();
@@ -869,7 +880,7 @@ public class LMExtendedWindow : EditorWindow
 		EditorGUI.EndDisabledGroup ();
 	}
 	
-	private bool BakeButton (params GUILayoutOption[] options)
+	bool BakeButton (params GUILayoutOption[] options)
 	{
 		GUIContent content = new GUIContent (ObjectNames.NicifyVariableName (bakeMode.ToString ()));
 		
@@ -909,6 +920,9 @@ public class LMExtendedWindow : EditorWindow
 	{
 		if (!CheckSettingsIntegrity ())
 			return;
+#if UNITY_5_0
+		Lightmapping.giWorkflowMode = Lightmapping.GIWorkflowMode.Legacy;
+#endif
 
 		switch (bakeMode) {
 		case BakeMode.BakeScene:
@@ -941,7 +955,7 @@ public class LMExtendedWindow : EditorWindow
 	
 	#endregion
 	
-	private void LMColorPicker (string name, ref ILConfig.LMColor color, string tooltip)
+	void LMColorPicker (string name, ref ILConfig.LMColor color, string tooltip)
 	{
 		Color c = EditorGUILayout.ColorField (new GUIContent (name, tooltip), new Color (color.r, color.g, color.b, color.a));
 		color = new ILConfig.LMColor (c.r, c.g, c.b, c.a);
